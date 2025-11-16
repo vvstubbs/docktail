@@ -25,10 +25,10 @@ type ServiceDefinition struct {
 
 // Labels for container discovery
 const (
-	LabelEnable   = "ts-svc.enable"
-	LabelService  = "ts-svc.service"
-	LabelPort     = "ts-svc.port"
-	LabelTarget   = "ts-svc.target"
-	LabelProtocol = "ts-svc.protocol"
-	LabelNetwork  = "ts-svc.network"
+	LabelEnable         = "ts-svc.enable"
+	LabelService        = "ts-svc.service"
+	LabelPort           = "ts-svc.port"
+	LabelTarget         = "ts-svc.target"
+	LabelTargetProtocol = "ts-svc.target-protocol"
+	LabelNetwork        = "ts-svc.network"
 )

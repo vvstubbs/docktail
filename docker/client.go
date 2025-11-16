@@ -93,19 +93,20 @@ func (c *Client) parseContainer(ctx context.Context, containerID string, labels 
 		return nil, fmt.Errorf("missing required label: %s", apptypes.LabelService)
 	}
 
-	port := labels[apptypes.LabelPort]
-	if port == "" {
-		return nil, fmt.Errorf("missing required label: %s", apptypes.LabelPort)
-	}
-
 	targetPort := labels[apptypes.LabelTarget]
 	if targetPort == "" {
 		return nil, fmt.Errorf("missing required label: %s", apptypes.LabelTarget)
 	}
 
-	protocol := labels[apptypes.LabelProtocol]
+	// Optional labels with defaults
+	port := labels[apptypes.LabelPort]
+	if port == "" {
+		port = "80"
+	}
+
+	protocol := labels[apptypes.LabelTargetProtocol]
 	if protocol == "" {
-		return nil, fmt.Errorf("missing required label: %s", apptypes.LabelProtocol)
+		protocol = "http"
 	}
 
 	// Validate protocol
@@ -116,7 +117,7 @@ func (c *Client) parseContainer(ctx context.Context, containerID string, labels 
 		"tls-terminated-tcp":  true,
 	}
 	if !validProtocols[protocol] {
-		return nil, fmt.Errorf("invalid protocol: %s (must be http, https, tcp, or tls-terminated-tcp)", protocol)
+		return nil, fmt.Errorf("invalid target-protocol: %s (must be http, https, tcp, or tls-terminated-tcp)", protocol)
 	}
 
 	// Get container details for port bindings

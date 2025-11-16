@@ -28,4 +28,4 @@ WORKDIR /app
 # Copy binary from build stage
 COPY --from=builder /build/ts-svc-autopilot .
 
-ENTRYPOINT ["/app/ts-svc-autopilot"]
+ENTRYPOINT ["/bin/sh", "-c", "sleep 1 && exec /app/ts-svc-autopilot"]

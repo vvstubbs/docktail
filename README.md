@@ -47,9 +47,9 @@ services:
     labels:
       - "ts-svc.enable=true"
       - "ts-svc.service=myapp"
-      - "ts-svc.port=443"              # Port on Tailscale
-      - "ts-svc.target=80"             # CONTAINER port (RIGHT side of "9080:80")
-      - "ts-svc.protocol=https"
+      - "ts-svc.port=443"                  # Port on Tailscale (default: 80)
+      - "ts-svc.target=80"                 # CONTAINER port (RIGHT side of "9080:80")
+      - "ts-svc.target-protocol=https"     # Protocol (default: http)
 ```
 
 **Port Mapping Rules:**
@@ -64,13 +64,13 @@ curl https://myapp.your-tailnet.ts.net
 
 ### Available Labels
 
-| Label | Required | Description | Example |
-|-------|----------|-------------|---------|
-| `ts-svc.enable` | Yes | Enable autopilot for container | `true` |
-| `ts-svc.service` | Yes | Service name | `web`, `api-v2` |
-| `ts-svc.port` | Yes | Port exposed on Tailscale | `443`, `8080` |
-| `ts-svc.target` | Yes | **CONTAINER** port (RIGHT side of `ports:`) | `80`, `3000` |
-| `ts-svc.protocol` | Yes | Protocol type | `http`, `https`, `tcp` |
+| Label | Required | Default | Description | Example |
+|-------|----------|---------|-------------|---------|
+| `ts-svc.enable` | Yes | - | Enable autopilot for container | `true` |
+| `ts-svc.service` | Yes | - | Service name | `web`, `api-v2` |
+| `ts-svc.target` | Yes | - | **CONTAINER** port (RIGHT side of `ports:`) | `80`, `3000` |
+| `ts-svc.port` | No | `80` | Port exposed on Tailscale | `443`, `8080` |
+| `ts-svc.target-protocol` | No | `http` | Protocol type | `http`, `https`, `tcp` |
 
 **Critical:** If `ports: "9080:80"`, then `ts-svc.target=80` (container port, NOT 9080)
 
@@ -145,9 +145,9 @@ services:
     labels:
       - "ts-svc.enable=true"
       - "ts-svc.service=web"
-      - "ts-svc.port=443"        # Tailscale port
-      - "ts-svc.target=80"       # CONTAINER port (right side)
-      - "ts-svc.protocol=https"
+      - "ts-svc.port=443"              # Tailscale port (default: 80)
+      - "ts-svc.target=80"             # CONTAINER port (right side)
+      - "ts-svc.target-protocol=https" # Protocol (default: http)
 ```
 
 ### Database
@@ -163,9 +163,9 @@ services:
     labels:
       - "ts-svc.enable=true"
       - "ts-svc.service=db"
-      - "ts-svc.port=5432"       # Tailscale port
-      - "ts-svc.target=5432"     # CONTAINER port
-      - "ts-svc.protocol=tcp"
+      - "ts-svc.port=5432"           # Tailscale port (default: 80)
+      - "ts-svc.target=5432"         # CONTAINER port
+      - "ts-svc.target-protocol=tcp" # Protocol (default: http)
 ```
 
 ### API (Different Host and Container Ports)
@@ -179,9 +179,9 @@ services:
     labels:
       - "ts-svc.enable=true"
       - "ts-svc.service=api"
-      - "ts-svc.port=443"        # Tailscale port
-      - "ts-svc.target=3000"     # CONTAINER port (right side: "8080:3000")
-      - "ts-svc.protocol=http"
+      - "ts-svc.port=443"              # Tailscale port (default: 80)
+      - "ts-svc.target=3000"           # CONTAINER port (right side: "8080:3000")
+      - "ts-svc.target-protocol=http"  # Protocol (default: http)
 ```
 
 ## Building from Source

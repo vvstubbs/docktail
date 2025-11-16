@@ -27,9 +27,9 @@ services:
     labels:
       - "ts-svc.enable=true"
       - "ts-svc.service=web1"
-      - "ts-svc.port=443"        # Port to expose on Tailscale
+      - "ts-svc.port=80"        # Port to expose on Tailscale
       - "ts-svc.target=80"       # CONTAINER port (RIGHT side of "9080:80" above)
-      - "ts-svc.protocol=http"   # http (not https) - nginx listens on plain HTTP
+      - "ts-svc.target-protocol=http"   # http (not https) - nginx listens on plain HTTP
 
   # Example web application - nginx instance 2
   web2:
@@ -41,9 +41,7 @@ services:
     labels:
       - "ts-svc.enable=true"
       - "ts-svc.service=web2"
-      - "ts-svc.port=443"       # Port to expose on Tailscale (different from web1)
       - "ts-svc.target=80"       # CONTAINER port (RIGHT side of "9081:80" above)
-      - "ts-svc.protocol=http"   # http (not https) - nginx listens on plain HTTP
 
 volumes:
   postgres-data:
