@@ -117,7 +117,7 @@ func (c *Client) parseContainer(ctx context.Context, containerID string, labels 
 		"tls-terminated-tcp":  true,
 	}
 	if !validProtocols[protocol] {
-		return nil, fmt.Errorf("invalid target-protocol: %s (must be http, https, tcp, or tls-terminated-tcp)", protocol)
+		return nil, fmt.Errorf("invalid protocol: %s (must be http, https, tcp, or tls-terminated-tcp)", protocol)
 	}
 
 	// Get container details for port bindings
@@ -181,7 +181,7 @@ func (c *Client) parseContainer(ctx context.Context, containerID string, labels 
 			"container port %s is NOT published to host. "+
 				"Tailscale serve requires localhost proxies. "+
 				"Fix: Add 'ports: [\"%s:%s\"]' to container '%s' in docker-compose.yaml. "+
-				"Format is HOST:CONTAINER where %s is the CONTAINER port (ts-svc.target=%s). "+
+				"Format is HOST:CONTAINER where %s is the CONTAINER port (ts-svc.port=%s). "+
 				"Available published ports: %v",
 			targetPort, targetPort, targetPort, containerName, targetPort, targetPort, availablePorts,
 		)

@@ -14,15 +14,15 @@ services:
       - "9080:80"  # ← REQUIRED! Format is HOST:CONTAINER
     labels:
       - "ts-svc.enable=true"
-      - "ts-svc.service=myapp"
-      - "ts-svc.port=443"
-      - "ts-svc.target=80"  # ← CONTAINER port (RIGHT side of "9080:80")
-      - "ts-svc.target-protocol=https"
+      - "ts-svc.name=myapp"
+      - "ts-svc.port=80"           # ← CONTAINER port (RIGHT side of "9080:80")
+      - "ts-svc.service-port=443"  # Optional: Port on Tailscale (default: 80)
+      - "ts-svc.protocol=https"    # Optional: Protocol (default: http)
 ```
 
 **Port Label Guide:**
 - **`ports:`** = `"HOST:CONTAINER"` (Docker format: `"9080:80"` means host 9080 → container 80)
-- **`ts-svc.target`** = CONTAINER port (always the RIGHT side of the mapping)
+- **`ts-svc.port`** = CONTAINER port (always the RIGHT side of the mapping)
 - **Result:** Tailscale → `localhost:9080` → Container:80
 
 ## What is Tailscale Services?
@@ -64,15 +64,15 @@ services:
       - "8080:80"  # REQUIRED: HOST:CONTAINER format - Publish container port to host
     labels:
       - "ts-svc.enable=true"
-      - "ts-svc.service=web"
-      - "ts-svc.port=443"              # Port to expose on Tailscale (default: 80)
-      - "ts-svc.target=80"             # CONTAINER port (RIGHT side of "8080:80")
-      - "ts-svc.target-protocol=http"  # Protocol (default: http)
+      - "ts-svc.name=web"
+      - "ts-svc.port=80"           # CONTAINER port (RIGHT side of "8080:80")
+      - "ts-svc.service-port=443"  # Port to expose on Tailscale (default: 80)
+      - "ts-svc.protocol=http"     # Protocol (default: http)
 ```
 
 **IMPORTANT PORT MAPPING RULES:**
 - **ports:** `"HOST:CONTAINER"` - Docker port format (e.g., `"9080:80"` maps host 9080 → container 80)
-- **ts-svc.target:** Always the **CONTAINER** port (the RIGHT side of the ports mapping)
+- **ts-svc.port:** Always the **CONTAINER** port (the RIGHT side of the ports mapping)
 - The autopilot automatically detects which HOST port it's published to
 
 **ts-svc-autopilot handles the rest:**
@@ -122,10 +122,10 @@ Monitors Docker events API for container lifecycle events (start, stop, die, res
 ### 2. Label Parsing
 Extracts Tailscale service configuration from container labels:
 - `ts-svc.enable`: Enable autopilot for this container
-- `ts-svc.service`: Service name (becomes `svc:name`)
-- `ts-svc.port`: External port to expose on Tailscale (default: 80)
-- `ts-svc.target`: Internal container port
-- `ts-svc.target-protocol`: Protocol (default: http) - options: `http`, `https`, `tcp`, `tls-terminated-tcp`
+- `ts-svc.name`: Service name (becomes `svc:name`)
+- `ts-svc.port`: Internal container port
+- `ts-svc.service-port`: External port to expose on Tailscale (default: 80)
+- `ts-svc.protocol`: Protocol (default: http) - options: `http`, `https`, `tcp`, `tls-terminated-tcp`
 
 ### 3. Port Binding Detection
 Queries Docker API for container's published port mappings to the host.
@@ -212,10 +212,10 @@ services:
       - "8080:80"  # HOST:CONTAINER - Publish container port 80 to host port 8080
     labels:
       - "ts-svc.enable=true"
-      - "ts-svc.service=web"
-      - "ts-svc.port=443"              # Port on Tailscale (default: 80)
-      - "ts-svc.target=80"             # CONTAINER port (RIGHT side: "8080:80")
-      - "ts-svc.target-protocol=https" # Protocol (default: http)
+      - "ts-svc.name=web"
+      - "ts-svc.port=80"           # CONTAINER port (RIGHT side: "8080:80")
+      - "ts-svc.service-port=443"  # Port on Tailscale (default: 80)
+      - "ts-svc.protocol=https"    # Protocol (default: http)
 
   # Another example - database
   postgres:
@@ -226,10 +226,10 @@ services:
       POSTGRES_PASSWORD: secret
     labels:
       - "ts-svc.enable=true"
-      - "ts-svc.service=db"
-      - "ts-svc.port=5432"           # Port on Tailscale (default: 80)
-      - "ts-svc.target=5432"         # CONTAINER port (RIGHT side: "5432:5432")
-      - "ts-svc.target-protocol=tcp" # Protocol (default: http)
+      - "ts-svc.name=db"
+      - "ts-svc.port=5432"          # CONTAINER port (RIGHT side: "5432:5432")
+      - "ts-svc.service-port=5432"  # Port on Tailscale (default: 80)
+      - "ts-svc.protocol=tcp"       # Protocol (default: http)
 ```
 
 ### Running the Containers
@@ -254,15 +254,15 @@ psql postgresql://user@db.your-tailnet.ts.net:5432/database
 | Label | Required | Default | Description | Example |
 |-------|----------|---------|-------------|---------|
 | `ts-svc.enable` | Yes | - | Enable autopilot for container | `true` |
-| `ts-svc.service` | Yes | - | Service name (alphanumeric, hyphens) | `web`, `api-v2` |
-| `ts-svc.target` | Yes | - | **CONTAINER** port (RIGHT side of `ports:` mapping) | `80`, `3000` |
-| `ts-svc.port` | No | `80` | Port exposed on Tailscale | `443`, `8080` |
-| `ts-svc.target-protocol` | No | `http` | Protocol type | `http`, `https`, `tcp` |
+| `ts-svc.name` | Yes | - | Service name (alphanumeric, hyphens) | `web`, `api-v2` |
+| `ts-svc.port` | Yes | - | **CONTAINER** port (RIGHT side of `ports:`) | `80`, `3000` |
+| `ts-svc.service-port` | No | `80` | Port exposed on Tailscale | `443`, `8080` |
+| `ts-svc.protocol` | No | `http` | Protocol type | `http`, `https`, `tcp` |
 
 **CRITICAL REQUIREMENTS:**
-1. Container port in `ts-svc.target` **MUST** be published via `ports:` in docker-compose.yaml
-2. `ts-svc.target` is ALWAYS the **CONTAINER** port (RIGHT side of `"HOST:CONTAINER"`)
-3. Example: If `ports: "9080:80"`, then `ts-svc.target=80` (not 9080)
+1. Container port in `ts-svc.port` **MUST** be published via `ports:` in docker-compose.yaml
+2. `ts-svc.port` is ALWAYS the **CONTAINER** port (RIGHT side of `"HOST:CONTAINER"`)
+3. Example: If `ports: "9080:80"`, then `ts-svc.port=80` (not 9080)
 4. Autopilot auto-detects the HOST port and proxies `localhost:9080` → Tailscale
 
 **Supported protocols:**
@@ -360,10 +360,10 @@ services:
       - "8080:3000"  # HOST:CONTAINER - Host port 8080 → Container port 3000
     labels:
       - "ts-svc.enable=true"
-      - "ts-svc.service=app"
-      - "ts-svc.port=443"              # Tailscale exposes on port 443 (default: 80)
-      - "ts-svc.target=3000"           # CONTAINER port (RIGHT side: "8080:3000")
-      - "ts-svc.target-protocol=https" # Protocol (default: http)
+      - "ts-svc.name=app"
+      - "ts-svc.port=3000"         # CONTAINER port (RIGHT side: "8080:3000")
+      - "ts-svc.service-port=443"  # Tailscale exposes on port 443 (default: 80)
+      - "ts-svc.protocol=https"    # Protocol (default: http)
 # Result: Tailscale (443) → localhost:8080 → Container (3000)
 ```
 
@@ -376,10 +376,10 @@ services:
       - "5432:5432"  # HOST:CONTAINER - Same port 5432 on both sides
     labels:
       - "ts-svc.enable=true"
-      - "ts-svc.service=database"
-      - "ts-svc.port=5432"           # Tailscale exposes on port 5432 (default: 80)
-      - "ts-svc.target=5432"         # CONTAINER port (RIGHT side: "5432:5432")
-      - "ts-svc.target-protocol=tcp" # Protocol (default: http)
+      - "ts-svc.name=database"
+      - "ts-svc.port=5432"          # CONTAINER port (RIGHT side: "5432:5432")
+      - "ts-svc.service-port=5432"  # Tailscale exposes on port 5432 (default: 80)
+      - "ts-svc.protocol=tcp"       # Protocol (default: http)
 # Result: Tailscale (5432) → localhost:5432 → Container (5432)
 ```
 
@@ -391,12 +391,12 @@ services:
   web-01:
     image: nginx
     labels:
-      - "ts-svc.service=web"  # Same name
-      
+      - "ts-svc.name=web"  # Same name
+
   web-02:
     image: nginx
     labels:
-      - "ts-svc.service=web"  # Same name
+      - "ts-svc.name=web"  # Same name
 ```
 
 Tailscale automatically load balances across available hosts.

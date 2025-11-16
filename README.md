@@ -95,43 +95,57 @@ tailscale serve status --json
 
 ### Usage
 
-**🚨 CRITICAL:** Container ports MUST be published to host. Tailscale serve only supports `localhost` proxies. This is a technical limitation of Tailscale.
+**🚨 CRITICAL:** Container ports MUST be published to host. Tailscale serve only supports `localhost` proxies.
 
+**Basic example:**
 ```yaml
 services:
   myapp:
     image: nginx:latest
     ports:
-      - "9080:80"  # REQUIRED! HOST:CONTAINER format
+      - "8080:80"  # REQUIRED! HOST:CONTAINER format
     labels:
       - "ts-svc.enable=true"
-      - "ts-svc.service=myapp"
-#     - "ts-svc.port=443"                  # Port on Tailscale (default: 80)
-      - "ts-svc.target=80"                 # CONTAINER port (RIGHT side of "9080:80")
-#     - "ts-svc.target-protocol=http"     # Protocol (default: http)
+      - "ts-svc.name=myapp"
+      - "ts-svc.port=80"  # CONTAINER port (RIGHT side of "8080:80")
 ```
-
-**Port Mapping Rules:**
-- `ports:` = `"HOST:CONTAINER"` (e.g., `"9080:80"` = host 9080 → container 80)
-- `ts-svc.target` = CONTAINER port (always the RIGHT side)
-- Result: Tailscale:443 → localhost:9080 → Container:80
 
 Access from any device in your tailnet:
 ```bash
 curl http://myapp.your-tailnet.ts.net
 ```
 
+**With optional labels:**
+```yaml
+services:
+  myapp:
+    image: nginx:latest
+    ports:
+      - "8080:80"
+    labels:
+      - "ts-svc.enable=true"
+      - "ts-svc.name=myapp"
+      - "ts-svc.port=80"
+      - "ts-svc.service-port=443"  # Port on Tailscale (default: 80)
+      - "ts-svc.protocol=https"    # Protocol (default: http)
+```
+
+**Port Mapping Rules:**
+- `ports:` = `"HOST:CONTAINER"` (e.g., `"8080:80"` = host 8080 → container 80)
+- `ts-svc.port` = CONTAINER port (always the RIGHT side)
+- Result: Tailscale → localhost:8080 → Container:80
+
 ### Available Labels
 
-| Label | Required | Default | Description | Example |
-|-------|----------|---------|-------------|---------|
-| `ts-svc.enable` | Yes | - | Enable autopilot for container | `true` |
-| `ts-svc.service` | Yes | - | Service name | `web`, `api-v2` |
-| `ts-svc.target` | Yes | - | **CONTAINER** port (RIGHT side of `ports:`) | `80`, `3000` |
-| `ts-svc.port` | No | `80` | Port exposed on Tailscale | `443`, `8080` |
-| `ts-svc.target-protocol` | No | `http` | Protocol type | `http`, `https`, `tcp` |
+| Label | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `ts-svc.enable` | Yes | - | Enable autopilot for container |
+| `ts-svc.name` | Yes | - | Service name (e.g., `web`, `api-v2`) |
+| `ts-svc.port` | Yes | - | **CONTAINER** port (RIGHT side of `ports:`) |
+| `ts-svc.service-port` | No | `80` | Port exposed on Tailscale |
+| `ts-svc.protocol` | No | `http` | Protocol: `http`, `https`, `tcp`, `tls-terminated-tcp` |
 
-**Critical:** If `ports: "9080:80"`, then `ts-svc.target=80` (container port, NOT 9080)
+**Critical:** If `ports: "9080:80"`, then `ts-svc.port=80` (container port, NOT 9080)
 
 ### Supported Protocols
 
@@ -193,52 +207,52 @@ Flow: Tailscale → localhost:9080 → Container:80
 
 ## Examples
 
-### Web Application
+### Web Application (Simple)
 
 ```yaml
 services:
   nginx:
     image: nginx:latest
     ports:
-      - "8080:80"  # HOST:CONTAINER
+      - "8080:80"
     labels:
       - "ts-svc.enable=true"
-      - "ts-svc.service=web"
-      - "ts-svc.target=80"             # CONTAINER port (right side)
+      - "ts-svc.name=web"
+      - "ts-svc.port=80"
 ```
 
-### Database
+### Database (Custom Port & Protocol)
 
 ```yaml
 services:
   postgres:
     image: postgres:16
     ports:
-      - "5432:5432"  # HOST:CONTAINER (same on both sides)
+      - "5432:5432"
     environment:
       POSTGRES_PASSWORD: secret
     labels:
       - "ts-svc.enable=true"
-      - "ts-svc.service=db"
-      - "ts-svc.port=5432"           # Tailscale port (default: 80)
-      - "ts-svc.target=5432"         # CONTAINER port
-      - "ts-svc.target-protocol=tcp" # Protocol (default: http)
+      - "ts-svc.name=db"
+      - "ts-svc.port=5432"
+      - "ts-svc.service-port=5432"
+      - "ts-svc.protocol=tcp"
 ```
 
-### API (Different Host and Container Ports)
+### API (Different Ports)
 
 ```yaml
 services:
   api:
     image: myapi:latest
     ports:
-      - "8080:3000"  # HOST:CONTAINER - Host 8080 → Container 3000
+      - "8080:3000"
     labels:
       - "ts-svc.enable=true"
-      - "ts-svc.service=api"
-      - "ts-svc.port=443"              # Tailscale port (default: 80)
-      - "ts-svc.target=3000"           # CONTAINER port (right side: "8080:3000")
-      - "ts-svc.target-protocol=http"  # Protocol (default: http)
+      - "ts-svc.name=api"
+      - "ts-svc.port=3000"
+      - "ts-svc.service-port=443"
+      - "ts-svc.protocol=https"
 ```
 
 ## Building from Source
