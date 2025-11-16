@@ -25,12 +25,17 @@ func NewClient(socketPath string) *Client {
 	}
 }
 
-// BuildConfig creates a Tailscale service configuration from container services
+// BuildConfig creates a COMPLETE Tailscale service configuration from ALL container services
+// This builds the full configuration that will REPLACE the entire Tailscale serve config
 func (c *Client) BuildConfig(services []*apptypes.ContainerService) *apptypes.TailscaleServiceConfig {
 	config := &apptypes.TailscaleServiceConfig{
 		Version:  "0.0.1",
 		Services: make(map[string]apptypes.ServiceDefinition),
 	}
+
+	log.Info().
+		Int("container_count", len(services)).
+		Msg("Building COMPLETE Tailscale configuration from ALL containers")
 
 	for _, svc := range services {
 		serviceName := fmt.Sprintf("svc:%s", svc.ServiceName)
@@ -48,30 +53,52 @@ func (c *Client) BuildConfig(services []*apptypes.ContainerService) *apptypes.Ta
 		}
 
 		// Add or merge with existing service
+		// Multiple containers can have the same service name with different endpoints
 		if existing, ok := config.Services[serviceName]; ok {
+			// Service already exists, add this endpoint to it
 			existing.Endpoints[endpointKey] = endpointValue
 			config.Services[serviceName] = existing
+			log.Info().
+				Str("service", serviceName).
+				Str("endpoint", endpointKey).
+				Str("target", endpointValue).
+				Str("container", svc.ContainerName).
+				Msg("Merged endpoint into existing service")
 		} else {
+			// New service, create it with this endpoint
 			config.Services[serviceName] = apptypes.ServiceDefinition{
 				Endpoints: map[string]string{
 					endpointKey: endpointValue,
 				},
 			}
+			log.Info().
+				Str("service", serviceName).
+				Str("endpoint", endpointKey).
+				Str("target", endpointValue).
+				Str("container", svc.ContainerName).
+				Msg("Created new service with endpoint")
 		}
-
-		log.Debug().
-			Str("service", serviceName).
-			Str("endpoint", endpointKey).
-			Str("target", endpointValue).
-			Msg("Added service endpoint")
 	}
+
+	log.Info().
+		Int("total_services", len(config.Services)).
+		Msg("Completed building full configuration")
 
 	return config
 }
 
 // GetCurrentConfig retrieves the current Tailscale service configuration
 func (c *Client) GetCurrentConfig(ctx context.Context) (*apptypes.TailscaleServiceConfig, error) {
-	cmd := exec.CommandContext(ctx, "tailscale", "serve", "get-config", "--all", "--json")
+	// Create temp file for config output
+	tmpFile, err := os.CreateTemp("", "ts-get-config-*.json")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer os.Remove(tmpFile.Name())
+	tmpFile.Close()
+
+	// Get config and write to temp file
+	cmd := exec.CommandContext(ctx, "tailscale", "serve", "get-config", "--all", tmpFile.Name())
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -90,8 +117,23 @@ func (c *Client) GetCurrentConfig(ctx context.Context) (*apptypes.TailscaleServi
 		return nil, fmt.Errorf("failed to get tailscale config: %w (output: %s)", err, stderr)
 	}
 
+	// Read the config file
+	configData, err := os.ReadFile(tmpFile.Name())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	// Handle empty config
+	if len(configData) == 0 {
+		log.Debug().Msg("Empty Tailscale config file, starting fresh")
+		return &apptypes.TailscaleServiceConfig{
+			Version:  "0.0.1",
+			Services: make(map[string]apptypes.ServiceDefinition),
+		}, nil
+	}
+
 	var config apptypes.TailscaleServiceConfig
-	if err := json.Unmarshal(output, &config); err != nil {
+	if err := json.Unmarshal(configData, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse tailscale config: %w", err)
 	}
 
@@ -99,7 +141,22 @@ func (c *Client) GetCurrentConfig(ctx context.Context) (*apptypes.TailscaleServi
 }
 
 // ApplyConfig applies a Tailscale service configuration
+// IMPORTANT: This REPLACES the ENTIRE Tailscale serve configuration using --all flag
 func (c *Client) ApplyConfig(ctx context.Context, config *apptypes.TailscaleServiceConfig) error {
+	// Log the complete configuration being applied
+	configJSON, _ := json.MarshalIndent(config, "", "  ")
+
+	var serviceNames []string
+	for svc := range config.Services {
+		serviceNames = append(serviceNames, svc)
+	}
+
+	log.Info().
+		RawJSON("config", configJSON).
+		Int("service_count", len(config.Services)).
+		Strs("services", serviceNames).
+		Msg("Applying COMPLETE Tailscale configuration (replaces all existing)")
+
 	// Write config to temp file
 	tmpFile, err := os.CreateTemp("", "ts-svc-*.json")
 	if err != nil {
@@ -115,21 +172,40 @@ func (c *Client) ApplyConfig(ctx context.Context, config *apptypes.TailscaleServ
 	}
 	tmpFile.Close()
 
-	// Apply config
+	// Apply config with --all flag (replaces entire configuration)
 	cmd := exec.CommandContext(ctx, "tailscale", "serve", "set-config", "--all", tmpFile.Name())
-	if output, err := cmd.CombinedOutput(); err != nil {
+	output, err := cmd.CombinedOutput()
+	if err != nil {
 		return fmt.Errorf("failed to set tailscale config: %w\nOutput: %s", err, string(output))
 	}
 
-	log.Info().Msg("Applied Tailscale service configuration")
+	log.Info().
+		Int("service_count", len(config.Services)).
+		Strs("services", serviceNames).
+		Msg("Successfully applied COMPLETE Tailscale configuration")
 	return nil
 }
 
-// AdvertiseServices advertises all services in the configuration
+// AdvertiseServices advertises ALL services in the configuration
 func (c *Client) AdvertiseServices(ctx context.Context, config *apptypes.TailscaleServiceConfig) error {
+	var serviceNames []string
+	for svc := range config.Services {
+		serviceNames = append(serviceNames, svc)
+	}
+
+	log.Info().
+		Int("service_count", len(config.Services)).
+		Strs("services", serviceNames).
+		Msg("Advertising ALL services to Tailscale")
+
+	successCount := 0
+	failCount := 0
+
 	for serviceName := range config.Services {
 		cmd := exec.CommandContext(ctx, "tailscale", "serve", "advertise", serviceName)
-		if output, err := cmd.CombinedOutput(); err != nil {
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			failCount++
 			log.Warn().
 				Err(err).
 				Str("service", serviceName).
@@ -138,10 +214,18 @@ func (c *Client) AdvertiseServices(ctx context.Context, config *apptypes.Tailsca
 			// Continue with other services
 			continue
 		}
+		successCount++
 		log.Info().
 			Str("service", serviceName).
-			Msg("Advertised service")
+			Msg("Successfully advertised service")
 	}
+
+	log.Info().
+		Int("total", len(config.Services)).
+		Int("success", successCount).
+		Int("failed", failCount).
+		Msg("Completed advertising all services")
+
 	return nil
 }
 

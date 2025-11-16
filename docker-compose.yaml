@@ -22,11 +22,13 @@ services:
     build: ./nginx-web1
     container_name: web1
     restart: unless-stopped
+    ports:
+      - "9080:80"  # HOST:CONTAINER - Publish container's port 80 to host's port 9080
     labels:
       - "ts-svc.enable=true"
       - "ts-svc.service=web1"
-      - "ts-svc.port=443"
-      - "ts-svc.target=80"
+      - "ts-svc.port=443"        # Port to expose on Tailscale
+      - "ts-svc.target=80"       # CONTAINER port (RIGHT side of "9080:80" above)
       - "ts-svc.protocol=https"
 
   # Example web application - nginx instance 2
@@ -34,11 +36,13 @@ services:
     build: ./nginx-web2
     container_name: web2
     restart: unless-stopped
+    ports:
+      - "9081:80"  # HOST:CONTAINER - Publish container's port 80 to host's port 9081
     labels:
       - "ts-svc.enable=true"
       - "ts-svc.service=web2"
-      - "ts-svc.port=8443"
-      - "ts-svc.target=80"
+      - "ts-svc.port=8443"       # Port to expose on Tailscale (different from web1)
+      - "ts-svc.target=80"       # CONTAINER port (RIGHT side of "9081:80" above)
       - "ts-svc.protocol=https"
 
 volumes:

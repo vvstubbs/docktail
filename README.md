@@ -36,19 +36,26 @@ tailscale serve status --json
 
 ### Usage
 
-Add labels to any Docker container to expose it via Tailscale Services:
+**🚨 CRITICAL:** Container ports MUST be published to host. Tailscale serve only supports `localhost` proxies.
 
 ```yaml
 services:
   myapp:
     image: nginx:latest
+    ports:
+      - "9080:80"  # REQUIRED! HOST:CONTAINER format
     labels:
       - "ts-svc.enable=true"
       - "ts-svc.service=myapp"
-      - "ts-svc.port=443"
-      - "ts-svc.target=80"
+      - "ts-svc.port=443"              # Port on Tailscale
+      - "ts-svc.target=80"             # CONTAINER port (RIGHT side of "9080:80")
       - "ts-svc.protocol=https"
 ```
+
+**Port Mapping Rules:**
+- `ports:` = `"HOST:CONTAINER"` (e.g., `"9080:80"` = host 9080 → container 80)
+- `ts-svc.target` = CONTAINER port (always the RIGHT side)
+- Result: Tailscale:443 → localhost:9080 → Container:80
 
 Access from any device in your tailnet:
 ```bash
@@ -62,9 +69,10 @@ curl https://myapp.your-tailnet.ts.net
 | `ts-svc.enable` | Yes | Enable autopilot for container | `true` |
 | `ts-svc.service` | Yes | Service name | `web`, `api-v2` |
 | `ts-svc.port` | Yes | Port exposed on Tailscale | `443`, `8080` |
-| `ts-svc.target` | Yes | Internal container port | `80`, `3000` |
+| `ts-svc.target` | Yes | **CONTAINER** port (RIGHT side of `ports:`) | `80`, `3000` |
 | `ts-svc.protocol` | Yes | Protocol type | `http`, `https`, `tcp` |
-| `ts-svc.network` | No | Specific Docker network | `custom_bridge` |
+
+**Critical:** If `ports: "9080:80"`, then `ts-svc.target=80` (container port, NOT 9080)
 
 ### Supported Protocols
 
@@ -86,8 +94,8 @@ curl https://myapp.your-tailnet.ts.net
 
 1. **Container Discovery**: Monitors Docker events API for container lifecycle events (start, stop, die, restart)
 2. **Label Parsing**: Extracts Tailscale service configuration from container labels
-3. **IP Address Resolution**: Queries Docker API for container's bridge network IP address
-4. **Configuration Generation**: Creates Tailscale service configuration JSON
+3. **Port Detection**: Queries Docker API for published host ports
+4. **Configuration Generation**: Creates Tailscale service configuration proxying to `localhost:HOST_PORT`
 5. **Configuration Application**: Executes Tailscale CLI commands to apply config and advertise services
 6. **Stateless Operation**: Periodically reconciles state by querying Docker and Tailscale APIs
 
@@ -100,15 +108,15 @@ curl https://myapp.your-tailnet.ts.net
 │  ┌──────────────────┐         ┌──────────────────┐     │
 │  │  ts-svc-autopilot│────────▶│ Tailscale Daemon │     │
 │  │   (Container)    │  CLI    │   (Host Process) │     │
-│  └────────┬─────────┘         └──────────────────┘     │
-│           │                                              │
-│           │ Docker Socket                                │
-│           │ Monitoring                                   │
-│           ▼                                              │
+│  └────────┬─────────┘         └────────┬─────────┘     │
+│           │                             │                │
+│           │ Docker Socket               │ Proxies to    │
+│           │ Monitoring                  │ localhost     │
+│           ▼                             ▼                │
 │  ┌──────────────────┐         ┌──────────────────┐     │
-│  │   App Container  │         │  App Container   │     │
-│  │  172.17.0.5:80   │         │  172.17.0.6:3000 │     │
-│  │  labels: {...}   │         │  labels: {...}   │     │
+│  │   App Container  │◀────────│  localhost:9080  │     │
+│  │   Port 80        │  Mapped │  localhost:9081  │     │
+│  │  ports: 9080:80  │◀────────│                  │     │
 │  └──────────────────┘         └──────────────────┘     │
 │                                                          │
 └─────────────────────────────────────────────────────────┘
@@ -120,6 +128,8 @@ curl https://myapp.your-tailnet.ts.net
               │  Access services:  │
               │  web.tailnet.ts.net│
               └────────────────────┘
+
+Flow: Tailscale → localhost:9080 → Container:80
 ```
 
 ## Examples
@@ -130,11 +140,13 @@ curl https://myapp.your-tailnet.ts.net
 services:
   nginx:
     image: nginx:latest
+    ports:
+      - "8080:80"  # HOST:CONTAINER
     labels:
       - "ts-svc.enable=true"
       - "ts-svc.service=web"
-      - "ts-svc.port=443"
-      - "ts-svc.target=80"
+      - "ts-svc.port=443"        # Tailscale port
+      - "ts-svc.target=80"       # CONTAINER port (right side)
       - "ts-svc.protocol=https"
 ```
 
@@ -144,35 +156,32 @@ services:
 services:
   postgres:
     image: postgres:16
+    ports:
+      - "5432:5432"  # HOST:CONTAINER (same on both sides)
     environment:
       POSTGRES_PASSWORD: secret
     labels:
       - "ts-svc.enable=true"
       - "ts-svc.service=db"
-      - "ts-svc.port=5432"
-      - "ts-svc.target=5432"
+      - "ts-svc.port=5432"       # Tailscale port
+      - "ts-svc.target=5432"     # CONTAINER port
       - "ts-svc.protocol=tcp"
 ```
 
-### API with Custom Network
+### API (Different Host and Container Ports)
 
 ```yaml
 services:
   api:
     image: myapi:latest
-    networks:
-      - custom
+    ports:
+      - "8080:3000"  # HOST:CONTAINER - Host 8080 → Container 3000
     labels:
       - "ts-svc.enable=true"
       - "ts-svc.service=api"
-      - "ts-svc.port=8080"
-      - "ts-svc.target=3000"
+      - "ts-svc.port=443"        # Tailscale port
+      - "ts-svc.target=3000"     # CONTAINER port (right side: "8080:3000")
       - "ts-svc.protocol=http"
-      - "ts-svc.network=custom"
-
-networks:
-  custom:
-    driver: bridge
 ```
 
 ## Building from Source

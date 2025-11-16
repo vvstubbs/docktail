@@ -9,6 +9,7 @@ import (
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
 	"github.com/rs/zerolog/log"
 
 	apptypes "github.com/marvinvr/ts-svc-autopilot/types"
@@ -118,61 +119,88 @@ func (c *Client) parseContainer(ctx context.Context, containerID string, labels 
 		return nil, fmt.Errorf("invalid protocol: %s (must be http, https, tcp, or tls-terminated-tcp)", protocol)
 	}
 
-	// Get container details for IP address
+	// Get container details for port bindings
 	inspect, err := c.cli.ContainerInspect(ctx, containerID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to inspect container: %w", err)
 	}
 
-	// Get IP address from specified network or auto-detect
-	networkName := labels[apptypes.LabelNetwork]
-	var ipAddress string
-
-	if networkName != "" {
-		// Use specified network
-		if network, ok := inspect.NetworkSettings.Networks[networkName]; ok {
-			ipAddress = network.IPAddress
-		}
-		if ipAddress == "" {
-			return nil, fmt.Errorf("no IP address found on specified network: %s", networkName)
-		}
-	} else {
-		// Auto-detect: try bridge first, then use first available network
-		if network, ok := inspect.NetworkSettings.Networks["bridge"]; ok && network.IPAddress != "" {
-			ipAddress = network.IPAddress
-			networkName = "bridge"
-		} else {
-			// Use first available network with an IP address
-			for name, network := range inspect.NetworkSettings.Networks {
-				if network.IPAddress != "" {
-					ipAddress = network.IPAddress
-					networkName = name
-					break
-				}
-			}
-		}
-
-		if ipAddress == "" {
-			return nil, fmt.Errorf("no IP address found on any network")
-		}
-	}
-
 	containerName := strings.TrimPrefix(inspect.Name, "/")
+
+	// Tailscale serve only supports localhost/127.0.0.1 proxies
+	// We need to find the published host port that maps to the target port
+	var hostPort string
+	targetPortKey := nat.Port(fmt.Sprintf("%s/tcp", targetPort))
 
 	log.Debug().
 		Str("container", containerName).
-		Str("network", networkName).
-		Str("ip", ipAddress).
-		Msg("Detected container network configuration")
+		Str("looking_for_port", string(targetPortKey)).
+		Msg("Looking for published port binding")
+
+	if inspect.HostConfig != nil && inspect.HostConfig.PortBindings != nil {
+		if bindings, ok := inspect.HostConfig.PortBindings[targetPortKey]; ok && len(bindings) > 0 {
+			// Use the first host port binding
+			hostPort = bindings[0].HostPort
+			log.Debug().
+				Str("container", containerName).
+				Str("target_port", targetPort).
+				Str("host_port", hostPort).
+				Msg("Detected published port binding")
+		}
+	}
+
+	// If no port binding found, check NetworkSettings.Ports as fallback
+	if hostPort == "" && inspect.NetworkSettings != nil && inspect.NetworkSettings.Ports != nil {
+		if bindings, ok := inspect.NetworkSettings.Ports[targetPortKey]; ok && len(bindings) > 0 {
+			hostPort = bindings[0].HostPort
+			log.Debug().
+				Str("container", containerName).
+				Str("target_port", targetPort).
+				Str("host_port", hostPort).
+				Msg("Detected published port from NetworkSettings")
+		}
+	}
+
+	if hostPort == "" {
+		// Debug: Show what ports ARE available
+		var availablePorts []string
+		if inspect.HostConfig != nil && inspect.HostConfig.PortBindings != nil {
+			for port := range inspect.HostConfig.PortBindings {
+				availablePorts = append(availablePorts, string(port))
+			}
+		}
+
+		log.Warn().
+			Str("container", containerName).
+			Str("needed_port", string(targetPortKey)).
+			Strs("available_ports", availablePorts).
+			Msg("Port not found in bindings")
+
+		return nil, fmt.Errorf(
+			"container port %s is NOT published to host. "+
+				"Tailscale serve requires localhost proxies. "+
+				"Fix: Add 'ports: [\"%s:%s\"]' to container '%s' in docker-compose.yaml. "+
+				"Format is HOST:CONTAINER where %s is the CONTAINER port (ts-svc.target=%s). "+
+				"Available published ports: %v",
+			targetPort, targetPort, targetPort, containerName, targetPort, targetPort, availablePorts,
+		)
+	}
+
+	log.Info().
+		Str("container", containerName).
+		Str("container_port", targetPort).
+		Str("host_port", hostPort).
+		Str("will_proxy_to", fmt.Sprintf("localhost:%s", hostPort)).
+		Msg("Detected port binding for Tailscale proxy")
 
 	return &apptypes.ContainerService{
 		ContainerID:   containerID[:12],
 		ContainerName: containerName,
 		ServiceName:   serviceName,
 		Port:          port,
-		TargetPort:    targetPort,
+		TargetPort:    hostPort, // Use the published host port
 		Protocol:      protocol,
-		IPAddress:     ipAddress,
-		Network:       networkName,
+		IPAddress:     "localhost", // Tailscale serve requires localhost
+		Network:       "host",      // Using host-published ports
 	}, nil
 }

@@ -100,8 +100,18 @@ func (r *Reconciler) Reconcile(ctx context.Context) error {
 			Msg("Container configuration")
 	}
 
-	// Build desired Tailscale configuration
+	// Build desired Tailscale configuration from ALL enabled containers
 	desiredConfig := r.tailscaleClient.BuildConfig(containers)
+
+	// Log the desired services
+	var desiredServices []string
+	for svc := range desiredConfig.Services {
+		desiredServices = append(desiredServices, svc)
+	}
+	log.Info().
+		Strs("desired_services", desiredServices).
+		Int("service_count", len(desiredConfig.Services)).
+		Msg("Built desired configuration from containers")
 
 	// Get current Tailscale configuration
 	currentConfig, err := r.tailscaleClient.GetCurrentConfig(ctx)
@@ -113,20 +123,36 @@ func (r *Reconciler) Reconcile(ctx context.Context) error {
 		}
 	}
 
+	// Log current services
+	var currentServices []string
+	for svc := range currentConfig.Services {
+		currentServices = append(currentServices, svc)
+	}
+	log.Info().
+		Strs("current_services", currentServices).
+		Int("service_count", len(currentConfig.Services)).
+		Msg("Retrieved current configuration")
+
 	// Check if configuration needs to be updated
 	if configsEqual(currentConfig, desiredConfig) {
-		log.Info().Msg("Configuration is up to date, no changes needed")
+		log.Info().
+			Strs("services", desiredServices).
+			Msg("Configuration is up to date, no changes needed")
 		return nil
 	}
 
-	log.Info().Msg("Configuration changed, applying updates")
+	log.Info().
+		Strs("desired_services", desiredServices).
+		Strs("current_services", currentServices).
+		Msg("Configuration changed, applying FULL configuration for ALL services")
 
-	// Apply the desired configuration
+	// Apply the COMPLETE desired configuration using --all flag
+	// This replaces the entire Tailscale serve configuration
 	if err := r.tailscaleClient.ApplyConfig(ctx, desiredConfig); err != nil {
 		return fmt.Errorf("failed to apply config: %w", err)
 	}
 
-	// Advertise services
+	// Advertise ALL services in the configuration
 	if err := r.tailscaleClient.AdvertiseServices(ctx, desiredConfig); err != nil {
 		return fmt.Errorf("failed to advertise services: %w", err)
 	}

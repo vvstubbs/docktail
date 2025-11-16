@@ -2,6 +2,29 @@
 
 Automatically expose Docker containers as Tailscale Services using label-based configuration - zero-config service mesh for your homelab.
 
+## Quick Start - Port Publishing Requirements
+
+**🚨 CRITICAL:** Container ports MUST be published to the host. Tailscale serve only supports `localhost` proxies.
+
+```yaml
+services:
+  myapp:
+    image: nginx
+    ports:
+      - "9080:80"  # ← REQUIRED! Format is HOST:CONTAINER
+    labels:
+      - "ts-svc.enable=true"
+      - "ts-svc.service=myapp"
+      - "ts-svc.port=443"
+      - "ts-svc.target=80"  # ← CONTAINER port (RIGHT side of "9080:80")
+      - "ts-svc.protocol=https"
+```
+
+**Port Label Guide:**
+- **`ports:`** = `"HOST:CONTAINER"` (Docker format: `"9080:80"` means host 9080 → container 80)
+- **`ts-svc.target`** = CONTAINER port (always the RIGHT side of the mapping)
+- **Result:** Tailscale → `localhost:9080` → Container:80
+
 ## What is Tailscale Services?
 
 [Tailscale Services](https://tailscale.com/kb/1552/tailscale-services) (currently in beta) decouples internal resources from the devices hosting them by creating named services with stable DNS names. Instead of connecting to specific devices, users connect to services using MagicDNS names while Tailscale automatically routes traffic to available hosts.
@@ -32,26 +55,33 @@ This is tedious, error-prone, and doesn't scale well for homelabs with many serv
 
 **ts-svc-autopilot** watches your Docker daemon and automatically manages Tailscale Services based on container labels - similar to how Traefik discovers services.
 
-**Just add labels to your containers:**
+**Just add labels to your containers and publish their ports:**
 ```yaml
 services:
   nginx:
     image: nginx:latest
+    ports:
+      - "8080:80"  # REQUIRED: HOST:CONTAINER format - Publish container port to host
     labels:
       - "ts-svc.enable=true"
       - "ts-svc.service=web"
-      - "ts-svc.port=443"
-      - "ts-svc.target=80"
+      - "ts-svc.port=443"              # Port to expose on Tailscale
+      - "ts-svc.target=80"             # CONTAINER port (RIGHT side of "8080:80")
       - "ts-svc.protocol=http"
 ```
 
+**IMPORTANT PORT MAPPING RULES:**
+- **ports:** `"HOST:CONTAINER"` - Docker port format (e.g., `"9080:80"` maps host 9080 → container 80)
+- **ts-svc.target:** Always the **CONTAINER** port (the RIGHT side of the ports mapping)
+- The autopilot automatically detects which HOST port it's published to
+
 **ts-svc-autopilot handles the rest:**
 - Detects container starts/stops via Docker events
-- Extracts bridge network IP addresses
-- Generates Tailscale service configurations
-- Applies configs and advertises services
+- Detects published host ports
+- Generates Tailscale service configurations (proxying to localhost)
+- Applies configs and advertises services via Tailscale CLI
 - Gracefully drains and cleans up on container stop
-- Updates configs when containers restart with new IPs
+- Updates configs when containers restart or ports change
 
 ## Architecture
 
@@ -97,18 +127,20 @@ Extracts Tailscale service configuration from container labels:
 - `ts-svc.target`: Internal container port
 - `ts-svc.protocol`: Protocol (`http`, `https`, `tcp`, `tls-terminated-tcp`)
 
-### 3. IP Address Resolution
-Queries Docker API for container's bridge network IP address (e.g., `172.17.0.5`).
+### 3. Port Binding Detection
+Queries Docker API for container's published port mappings to the host.
+
+**Important:** Tailscale serve only supports proxying to `localhost` or `127.0.0.1`. Container ports MUST be published to the host.
 
 ### 4. Configuration Generation
-Creates Tailscale service configuration JSON:
+Creates Tailscale service configuration JSON proxying to localhost:
 ```json
 {
   "version": "0.0.1",
   "services": {
     "svc:web": {
       "endpoints": {
-        "tcp:443": "http://172.17.0.5:80"
+        "tcp:443": "http://localhost:8080"
       }
     }
   }
@@ -176,23 +208,27 @@ services:
   # Example application
   nginx:
     image: nginx:latest
+    ports:
+      - "8080:80"  # HOST:CONTAINER - Publish container port 80 to host port 8080
     labels:
       - "ts-svc.enable=true"
       - "ts-svc.service=web"
-      - "ts-svc.port=443"
-      - "ts-svc.target=80"
+      - "ts-svc.port=443"        # Port on Tailscale
+      - "ts-svc.target=80"       # CONTAINER port (RIGHT side: "8080:80")
       - "ts-svc.protocol=https"
 
   # Another example - database
   postgres:
     image: postgres:16
+    ports:
+      - "5432:5432"  # HOST:CONTAINER - Same port on both sides
     environment:
       POSTGRES_PASSWORD: secret
     labels:
       - "ts-svc.enable=true"
       - "ts-svc.service=db"
-      - "ts-svc.port=5432"
-      - "ts-svc.target=5432"
+      - "ts-svc.port=5432"       # Port on Tailscale
+      - "ts-svc.target=5432"     # CONTAINER port (RIGHT side: "5432:5432")
       - "ts-svc.protocol=tcp"
 ```
 
@@ -220,8 +256,14 @@ psql postgresql://user@db.your-tailnet.ts.net:5432/database
 | `ts-svc.enable` | Yes | Enable autopilot for container | `true` |
 | `ts-svc.service` | Yes | Service name (alphanumeric, hyphens) | `web`, `api-v2` |
 | `ts-svc.port` | Yes | Port exposed on Tailscale | `443`, `8080` |
-| `ts-svc.target` | Yes | Internal container port | `80`, `3000` |
+| `ts-svc.target` | Yes | **CONTAINER** port (RIGHT side of `ports:` mapping) | `80`, `3000` |
 | `ts-svc.protocol` | Yes | Protocol type | `http`, `https`, `tcp` |
+
+**CRITICAL REQUIREMENTS:**
+1. Container port in `ts-svc.target` **MUST** be published via `ports:` in docker-compose.yaml
+2. `ts-svc.target` is ALWAYS the **CONTAINER** port (RIGHT side of `"HOST:CONTAINER"`)
+3. Example: If `ports: "9080:80"`, then `ts-svc.target=80` (not 9080)
+4. Autopilot auto-detects the HOST port and proxies `localhost:9080` → Tailscale
 
 **Supported protocols:**
 - `http`: Layer 7 HTTP forwarding
@@ -307,17 +349,38 @@ On Docker events (start/stop/die/restart):
 | `DOCKER_HOST` | `unix:///var/run/docker.sock` | Docker daemon socket |
 | `TAILSCALE_SOCKET` | `/var/run/tailscale/tailscaled.sock` | Tailscale daemon socket |
 
-### Multiple Networks
+### Port Publishing Examples
 
-For containers on multiple Docker networks:
+**Example 1: Different host and container ports**
 ```yaml
-labels:
-  - "ts-svc.enable=true"
-  - "ts-svc.service=app"
-  - "ts-svc.network=custom_bridge"  # Specify which network
-  - "ts-svc.port=443"
-  - "ts-svc.target=8080"
-  - "ts-svc.protocol=https"
+services:
+  app:
+    image: myapp:latest
+    ports:
+      - "8080:3000"  # HOST:CONTAINER - Host port 8080 → Container port 3000
+    labels:
+      - "ts-svc.enable=true"
+      - "ts-svc.service=app"
+      - "ts-svc.port=443"    # Tailscale exposes on port 443
+      - "ts-svc.target=3000" # CONTAINER port (RIGHT side: "8080:3000")
+      - "ts-svc.protocol=https"
+# Result: Tailscale (443) → localhost:8080 → Container (3000)
+```
+
+**Example 2: Same port on host and container**
+```yaml
+services:
+  db:
+    image: postgres:16
+    ports:
+      - "5432:5432"  # HOST:CONTAINER - Same port 5432 on both sides
+    labels:
+      - "ts-svc.enable=true"
+      - "ts-svc.service=database"
+      - "ts-svc.port=5432"   # Tailscale exposes on port 5432
+      - "ts-svc.target=5432" # CONTAINER port (RIGHT side: "5432:5432")
+      - "ts-svc.protocol=tcp"
+# Result: Tailscale (5432) → localhost:5432 → Container (5432)
 ```
 
 ### High Availability
@@ -340,11 +403,11 @@ Tailscale automatically load balances across available hosts.
 
 ## Limitations
 
+- **Port publishing required**: Container ports MUST be published to the host (Tailscale serve only supports `localhost` proxies)
 - **TCP only**: Tailscale Services currently only support TCP protocol
-- **Bridge networks**: Container must be on a Docker network the host can route to
-- **Linux recommended**: Layer 3 endpoints only work on Linux
 - **Tag-based identity**: Host machine must use Tailscale tags, not user authentication
 - **No hairpinning**: Containers cannot access their own Tailscale service endpoint
+- **Port conflicts**: Published ports must not conflict with other services on the host
 
 ## Links
 
