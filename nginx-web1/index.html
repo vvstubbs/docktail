@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Instance 1</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 600px;
+        }
+        h1 {
+            margin: 0 0 20px 0;
+            font-size: 2.5em;
+        }
+        .info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .label {
+            font-weight: bold;
+            text-align: left;
+        }
+        .value {
+            text-align: right;
+            font-family: monospace;
+        }
+        .badge {
+            display: inline-block;
+            background: #48bb78;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 Web Instance 1</h1>
+        <div class="badge">NGINX Server</div>
+
+        <div class="info">
+            <div class="info-row">
+                <span class="label">Hostname:</span>
+                <span class="value" id="hostname">Loading...</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Instance:</span>
+                <span class="value">web1</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Service Port:</span>
+                <span class="value">443 (HTTPS)</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Container Port:</span>
+                <span class="value">80</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Timestamp:</span>
+                <span class="value" id="timestamp"></span>
+            </div>
+            <div class="info-row">
+                <span class="label">Random ID:</span>
+                <span class="value" id="random"></span>
+            </div>
+        </div>
+
+        <p style="margin-top: 30px; opacity: 0.8;">
+            This is test instance #1 for ts-svc-autopilot
+        </p>
+    </div>
+
+    <script>
+        // Set timestamp
+        document.getElementById('timestamp').textContent = new Date().toISOString();
+
+        // Generate random ID
+        document.getElementById('random').textContent = Math.random().toString(36).substring(2, 15);
+
+        // Get hostname (will show container ID when running in Docker)
+        fetch('/hostname.txt')
+            .then(response => response.text())
+            .then(hostname => {
+                document.getElementById('hostname').textContent = hostname.trim();
+            })
+            .catch(() => {
+                document.getElementById('hostname').textContent = window.location.hostname;
+            });
+    </script>
+</body>
+</html>
