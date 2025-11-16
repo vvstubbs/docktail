@@ -19,9 +19,9 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-w -s' -o 
 # Runtime stage
 FROM alpine:latest
 
-# Install Tailscale
-RUN apk add --no-cache ca-certificates curl && \
-    curl -fsSL https://tailscale.com/install.sh | sh
+# Install Tailscale from Alpine edge repository (or download static binary)
+RUN apk add --no-cache ca-certificates iptables ip6tables && \
+    apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community tailscale
 
 WORKDIR /app
 
