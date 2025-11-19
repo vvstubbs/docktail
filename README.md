@@ -94,9 +94,6 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock
-    environment:
-      - LOG_LEVEL=info
-      - RECONCILE_INTERVAL=60s
 ```
 
 #### Option 2: Docker Run
@@ -107,8 +104,6 @@ docker run -d \
   --restart unless-stopped \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   -v /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock \
-  -e LOG_LEVEL=info \
-  -e RECONCILE_INTERVAL=60s \
   ghcr.io/marvinvr/docktail:latest
 ```
 
