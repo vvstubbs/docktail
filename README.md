@@ -37,7 +37,7 @@ Automatically expose Docker containers as Tailscale Services using label-based c
 ## Features
 
 - [x] Automatically discover and advertise Docker containers as Tailscale services
-- [x] Supports HTTP, HTTPS and TCP protocols
+- [x] Supports HTTP, HTTPS and TCP protocols for running services
 - [x] Zero-config service mesh for your dockerized services
 - [x] Automatically clean up Tailscale service configurations on container stop
 - [x] Runs entirely in a **stateless Docker container**
