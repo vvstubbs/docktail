@@ -47,5 +47,27 @@ services:
       # service-port defaults to "443" (based on service-protocol=https)
       # protocol defaults to "http" (based on container port=80, not 443)
 
+  # Example: Serve + Funnel (both tailnet AND public internet access)
+  web-public:
+    build: ./test/nginx-web1
+    container_name: web-public
+    restart: unless-stopped
+    ports:
+      - "9082:80"  # HOST:CONTAINER
+    labels:
+      # Serve configuration (tailnet-only):
+      - "docktail.service.enable=true"               # Enable serve
+      - "docktail.service.name=public-demo"          # Service name (tailnet only)
+      - "docktail.service.port=80"                   # Container port for serve
+      - "docktail.service.service-port=443"          # Tailnet HTTPS port
+
+      # Funnel configuration (public internet):
+      - "docktail.funnel.enable=true"                # ⚠️ Enable funnel (public access)
+      - "docktail.funnel.port=80"                    # Container port for funnel
+
+      # Result:
+      # Tailnet: https://public-demo.<tailnet>.ts.net (serve)
+      # Public:  https://<machine-name>.<tailnet>.ts.net:443 (funnel)
+
 volumes:
   postgres-data:

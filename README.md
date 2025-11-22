@@ -44,7 +44,7 @@ Automatically expose Docker containers as Tailscale Services using label-based c
 - [x] Support Tailscale HTTPS (auto TLS certificate)
 - [x] Automatically drain Tailscale service configurations on container stop
 - [x] Runs entirely in a **stateless Docker container**
-- [ ] Add Tailscale Funnel Support
+- [x] Tailscale Funnel support (public internet access)
 - [ ] More? => Create an Issue :)
 
 > [!WARNING]
@@ -173,6 +173,10 @@ services:
 
 ### Available Labels
 
+#### Service Labels (Tailnet-only Access)
+
+See [Tailscale Service documentation](https://tailscale.com/kb/1552/tailscale-services) for detailed setup instructions.
+
 | Label | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `docktail.service.enable` | Yes | - | Enable DockTail for container |
@@ -188,6 +192,31 @@ services:
 - ***`protocol`: Defaults to `https` if container `port=443`, otherwise `http`
 
 **Critical:** If `ports: "9080:80"`, then `docktail.service.port=80` (container port, NOT 9080)
+
+#### Funnel Labels (Public Internet Access)
+
+See [Tailscale Funnel documentation](https://tailscale.com/kb/1311/tailscale-funnel) for detailed setup instructions.
+
+**Independent from serve labels**
+
+| Label | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `docktail.funnel.enable` | Yes (for funnel) | `false` | Enable Tailscale Funnel (public internet access) |
+| `docktail.funnel.port` | Yes (for funnel) | - | **CONTAINER** port (same concept as `service.port`) |
+| `docktail.funnel.funnel-port` | No | `443` | **PUBLIC** port (must be 443, 8443, or 10000 for HTTPS) |
+| `docktail.funnel.protocol` | No | `https` | Protocol: `https`, `tcp`, `tls-terminated-tcp` |
+
+**Notes about Funnel:**
+- Funnel is independent of serve - different labels, different ports, different everything
+- Can run funnel alone, serve alone, or both side-by-side on the same container
+- Funnel uses the **machine's hostname**, NOT service names (unlike serve)
+- Public URL format: `https://<machine-hostname>.<tailnet>.ts.net:<funnel-port>`
+- **⚠️ IMPORTANT**: Only ONE funnel can be active per `funnel-port` (Tailscale limitation). Multiple containers cannot share the same `funnel-port`.
+- When used together with serve:
+  - Serve URL: `https://<service-name>.<tailnet>.ts.net` (tailnet only, uses `service.port`)
+  - Funnel URL: `https://<machine-hostname>.<tailnet>.ts.net:<funnel-port>` (public, uses `funnel.port`)
+- `funnel-port` (public) can be: **443**, **8443**, or **10000** for HTTPS
+- Funnel exposes your service to the **⚠️ public internet** - use with caution!
 
 ### Supported Protocols
 
@@ -271,6 +300,63 @@ Access with automatic TLS:
 curl https://api.your-tailnet.ts.net  # TLS cert auto-provisioned!
 ```
 
+### Public Website with Funnel (Internet Access)
+
+```yaml
+services:
+  website:
+    image: nginx:latest
+    ports:
+      - "8080:80"
+    labels:
+      - "docktail.service.enable=true"
+      - "docktail.service.name=website"
+      - "docktail.service.port=80"
+      - "docktail.service.service-port=443"      # Serve HTTPS on tailnet
+      - "docktail.funnel.enable=true"            # Enable public internet access
+      - "docktail.funnel.port=80"                # Container port for funnel
+      # funnel.protocol defaults to "https" and funnel.funnel-port defaults to "443"
+```
+
+Access from your tailnet and the public internet:
+```bash
+# Tailnet-only access (via serve, uses service name):
+curl https://website.your-tailnet.ts.net
+
+# Public internet access (via funnel, uses machine hostname):
+curl https://your-machine-name.your-tailnet.ts.net
+```
+
+**Security Note:** Funnel exposes your service to the **public internet**. Ensure proper authentication and security measures are in place!
+
+### Funnel with Custom Public Port
+
+```yaml
+services:
+  app:
+    image: myapp:latest
+    ports:
+      - "8080:3000"
+    labels:
+      - "docktail.service.enable=true"
+      - "docktail.service.name=app"
+      - "docktail.service.port=3000"
+      - "docktail.service.service-port=443"       # Tailnet HTTPS
+      - "docktail.funnel.enable=true"             # Enable funnel
+      - "docktail.funnel.port=3000"               # Container port for funnel
+      - "docktail.funnel.funnel-port=8443"        # Public port (443, 8443, or 10000)
+      - "docktail.funnel.protocol=https"          # Funnel protocol
+```
+
+Access via custom public port:
+```bash
+# Tailnet (serve):
+curl https://app.your-tailnet.ts.net
+
+# Public internet (funnel):
+curl https://your-machine-name.your-tailnet.ts.net:8443
+```
+
 ## Building from Source
 
 ```bash
@@ -287,6 +373,7 @@ docker build -t docktail:latest .
 ## Links
 
 - [Tailscale Services Documentation](https://tailscale.com/kb/1552/tailscale-services)
+- [Tailscale Funnel Documentation](https://tailscale.com/kb/1311/tailscale-funnel)
 - [Tailscale Service Configuration Reference](https://tailscale.com/kb/1589/tailscale-services-configuration-file)
 - [Docker SDK for Go](https://docs.docker.com/engine/api/sdk/)
 

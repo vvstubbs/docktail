@@ -252,15 +252,96 @@ func (c *Client) parseContainer(ctx context.Context, containerID string, labels 
 		Str("will_proxy_to", fmt.Sprintf("localhost:%s", hostPort)).
 		Msg("Detected port binding for Tailscale proxy")
 
+	// Parse funnel configuration (COMPLETELY INDEPENDENT of serve)
+	funnelEnabled := labels[apptypes.LabelFunnelEnable] == "true"
+	var funnelPort, funnelTargetPort, funnelFunnelPort, funnelProtocol string
+
+	if funnelEnabled {
+		// Get funnel-specific container port (like service.port but for funnel)
+		funnelPort = labels[apptypes.LabelFunnelPort]
+		if funnelPort == "" {
+			return nil, fmt.Errorf("funnel enabled but missing required label: %s (container port)", apptypes.LabelFunnelPort)
+		}
+
+		// Get funnel protocol
+		funnelProtocol = labels[apptypes.LabelFunnelProtocol]
+		if funnelProtocol == "" {
+			funnelProtocol = "https" // Default to HTTPS
+			log.Debug().
+				Str("container", containerID[:12]).
+				Msg("Funnel protocol not specified, defaulting to HTTPS")
+		}
+
+		// Get public-facing funnel port (funnel-port)
+		funnelFunnelPort = labels[apptypes.LabelFunnelFunnelPort]
+		if funnelFunnelPort == "" {
+			funnelFunnelPort = "443" // Default to 443
+			log.Debug().
+				Str("container", containerID[:12]).
+				Msg("Funnel public port not specified, defaulting to 443")
+		}
+
+		// Validate funnel-port for HTTPS (must be 443, 8443, or 10000)
+		if funnelProtocol == "https" || funnelProtocol == "http" {
+			validFunnelPorts := map[string]bool{
+				"443":   true,
+				"8443":  true,
+				"10000": true,
+			}
+			if !validFunnelPorts[funnelFunnelPort] {
+				return nil, fmt.Errorf("invalid funnel-port: %s for HTTPS/HTTP (must be 443, 8443, or 10000)", funnelFunnelPort)
+			}
+		}
+
+		// Validate funnel protocol
+		validFunnelProtocols := map[string]bool{
+			"https":              true,
+			"tcp":                true,
+			"tls-terminated-tcp": true,
+		}
+		if !validFunnelProtocols[funnelProtocol] {
+			return nil, fmt.Errorf("invalid funnel protocol: %s (must be https, tcp, or tls-terminated-tcp)", funnelProtocol)
+		}
+
+		// Find the published host port for the funnel container port
+		funnelPortKey := nat.Port(fmt.Sprintf("%s/tcp", funnelPort))
+		if inspect.HostConfig != nil && inspect.HostConfig.PortBindings != nil {
+			if bindings, ok := inspect.HostConfig.PortBindings[funnelPortKey]; ok && len(bindings) > 0 {
+				funnelTargetPort = bindings[0].HostPort
+			}
+		}
+		if funnelTargetPort == "" && inspect.NetworkSettings != nil && inspect.NetworkSettings.Ports != nil {
+			if bindings, ok := inspect.NetworkSettings.Ports[funnelPortKey]; ok && len(bindings) > 0 {
+				funnelTargetPort = bindings[0].HostPort
+			}
+		}
+
+		if funnelTargetPort == "" {
+			return nil, fmt.Errorf("funnel container port %s is NOT published to host. Add it to ports in docker-compose", funnelPort)
+		}
+
+		log.Info().
+			Str("container", containerName).
+			Str("funnel_container_port", funnelPort).
+			Str("funnel_host_port", funnelTargetPort).
+			Str("funnel_public_port", funnelFunnelPort).
+			Str("funnel_protocol", funnelProtocol).
+			Msg("Funnel enabled for public internet access")
+	}
+
 	return &apptypes.ContainerService{
-		ContainerID:     containerID[:12],
-		ContainerName:   containerName,
-		ServiceName:     serviceName,
-		Port:            port,
-		TargetPort:      hostPort, // Use the published host port
-		ServiceProtocol: serviceProtocol,
-		Protocol:        protocol,
-		IPAddress:       "localhost", // Tailscale serve requires localhost
-		Network:         "host",      // Using host-published ports
+		ContainerID:      containerID[:12],
+		ContainerName:    containerName,
+		ServiceName:      serviceName,
+		Port:             port,
+		TargetPort:       hostPort, // Use the published host port
+		ServiceProtocol:  serviceProtocol,
+		Protocol:         protocol,
+		IPAddress:        "localhost", // Tailscale serve requires localhost
+		FunnelEnabled:    funnelEnabled,
+		FunnelPort:       funnelPort,       // Container port for funnel
+		FunnelTargetPort: funnelTargetPort, // Host port for funnel
+		FunnelFunnelPort: funnelFunnelPort, // Public port for funnel
+		FunnelProtocol:   funnelProtocol,
 	}, nil
 }
