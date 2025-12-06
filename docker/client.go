@@ -126,11 +126,12 @@ func (c *Client) parseContainer(ctx context.Context, containerID string, labels 
 	validProtocols := map[string]bool{
 		"http":                true,
 		"https":               true,
+		"https+insecure":      true,
 		"tcp":                 true,
 		"tls-terminated-tcp":  true,
 	}
 	if !validProtocols[protocol] {
-		return nil, fmt.Errorf("invalid protocol: %s (must be http, https, tcp, or tls-terminated-tcp)", protocol)
+		return nil, fmt.Errorf("invalid protocol: %s (must be http, https, https+insecure, tcp, or tls-terminated-tcp)", protocol)
 	}
 
 	// Smart defaults based on both fields
@@ -195,8 +196,14 @@ func (c *Client) parseContainer(ctx context.Context, containerID string, labels 
 	}
 	// else: both are set, use as-is
 
-	// Validate service protocol
-	if !validProtocols[serviceProtocol] {
+	// Validate service protocol (Tailscale-facing protocol)
+	validServiceProtocols := map[string]bool{
+		"http":               true,
+		"https":              true,
+		"tcp":                true,
+		"tls-terminated-tcp": true,
+	}
+	if !validServiceProtocols[serviceProtocol] {
 		return nil, fmt.Errorf("invalid service-protocol: %s (must be http, https, tcp, or tls-terminated-tcp)", serviceProtocol)
 	}
 

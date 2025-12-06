@@ -182,7 +182,7 @@ See [Tailscale Service documentation](https://tailscale.com/kb/1552/tailscale-se
 | `docktail.service.enable` | Yes | - | Enable DockTail for container |
 | `docktail.service.name` | Yes | - | Service name (e.g., `web`, `api-v2`) |
 | `docktail.service.port` | Yes | - | **CONTAINER** port (RIGHT side of `ports:`) |
-| `docktail.service.protocol` | No | Smart*** | Protocol container speaks: `http`, `https`, `tcp`, `tls-terminated-tcp` |
+| `docktail.service.protocol` | No | Smart*** | Protocol container speaks: `http`, `https`, `https+insecure`, `tcp`, `tls-terminated-tcp` |
 | `docktail.service.service-port` | No | Smart* | Port Tailscale listens on |
 | `docktail.service.service-protocol` | No | Smart** | Protocol Tailscale uses: `http`, `https`, `tcp` |
 
@@ -220,10 +220,18 @@ See [Tailscale Funnel documentation](https://tailscale.com/kb/1311/tailscale-fun
 
 ### Supported Protocols
 
+**Service Protocols (Tailscale-facing):**
 - `http`: Layer 7 HTTP forwarding
 - `https`: Layer 7 HTTPS forwarding (auto TLS cert)
 - `tcp`: Layer 4 TCP forwarding
 - `tls-terminated-tcp`: Layer 4 with TLS termination
+
+**Backend Protocols (Container-facing):**
+- `http`: HTTP backend
+- `https`: HTTPS backend with valid certificate
+- `https+insecure`: HTTPS backend with self-signed/invalid certificate
+- `tcp`: TCP backend
+- `tls-terminated-tcp`: TCP with TLS termination
 
 ### Environment Variables
 
