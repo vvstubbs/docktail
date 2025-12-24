@@ -112,6 +112,52 @@ docker run -d \
   ghcr.io/marvinvr/docktail:latest
 ```
 
+#### Option 3: Docker Compose with Containerized Tailscale
+
+For configurations running `tailscaled` in a container rather than directly on the host, the Tailscale socket needs to be shared between DockTail and Tailscale. This can be achieved using a shared volume.
+
+As long as the Tailscale container is running in `network_mode: host`, it will still see the container ports correctly on localhost.
+
+```yaml
+version: '3.8'
+
+services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale
+    restart: unless-stopped
+    volumes:
+      - /dev/net/tun:/dev/net/tun
+      - ts_sock:/tmp
+    network_mode: host
+    environment:
+      - TS_AUTHKEY=your-auth-key  # Replace with your Tailscale auth key
+      - TS_STATE_DIR=/var/lib/tailscale
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
+  docktail:
+    image: ghcr.io/marvinvr/docktail:latest
+    container_name: docktail
+    restart: unless-stopped
+    network_mode: service:tailscale
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ts_sock:/var/run/tailscale
+
+volumes:
+  ts_sock:
+    driver: local
+```
+
+**Key points:**
+- The `ts_sock` volume is shared between both containers
+- Tailscale container mounts the volume at `/tmp` (where it creates `tailscaled.sock`)
+- DockTail mounts the volume at `/var/run/tailscale` (its default socket location)
+- Tailscale runs in `network_mode: host` to access container ports on localhost
+- DockTail uses `network_mode: service:tailscale` to share Tailscale's network namespace
+
 ### Usage
 
 **🚨 CRITICAL:** Container ports MUST be published to host. Tailscale serve only supports `localhost` proxies.
