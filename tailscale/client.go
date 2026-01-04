@@ -1,23 +1,39 @@
 package tailscale
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
 	apptypes "github.com/marvinvr/docktail/types"
 )
 
-// Client handles Tailscale CLI interactions
+// Client handles Tailscale CLI interactions and API calls
 type Client struct {
 	socketPath string
+	apiKey     string
+	tailnet    string
+	baseURL    string
+	httpClient *http.Client
 }
 
 // NewClient creates a new Tailscale client
-func NewClient(socketPath string) *Client {
+func NewClient(socketPath, apiKey, tailnet string) *Client {
 	return &Client{
 		socketPath: socketPath,
+		apiKey:     apiKey,
+		tailnet:    tailnet,
+		baseURL:    "https://api.tailscale.com",
+		httpClient: &http.Client{
+			Timeout: 10 * time.Second,
+		},
 	}
 }
 
@@ -196,7 +212,188 @@ func (c *Client) ReconcileServices(ctx context.Context, desiredServices []*appty
 		return fmt.Errorf("funnel reconciliation failed: %w", err)
 	}
 
+	// Sync Service Definitions to Control Plane (API)
+	// This is done after local serve commands to ensure local state is consistent first,
+	// but failures here are non-blocking for the local advertisement.
+	if c.apiKey != "" {
+		if err := c.syncServiceDefinitions(ctx, desiredServices); err != nil {
+			// Log error but do NOT return it - we don't want API failures to break local serving
+			log.Error().Err(err).Msg("Failed to sync service definitions to Tailscale API")
+		}
+	}
+
 	return nil
+}
+
+// syncServiceDefinitions syncs all desired services to the Tailscale Control Plane
+func (c *Client) syncServiceDefinitions(ctx context.Context, services []*apptypes.ContainerService) error {
+	// Deduplicate by service name - we only need to upsert each service definition once
+	// We also need to capture the port to send to the API
+	type serviceDef struct {
+		Tags []string
+		Port string
+	}
+	uniqueServices := make(map[string]serviceDef)
+
+	for _, svc := range services {
+		// If multiple containers share a service name, we use the tags/port from the last one seen.
+		// In a consistent config, they should be identical.
+		// Note: svc.Port is the "service-port" (Tailscale side), not the container port.
+		uniqueServices[svc.ServiceName] = serviceDef{
+			Tags: svc.Tags,
+			Port: svc.Port,
+		}
+	}
+
+	log.Info().
+		Int("unique_services", len(uniqueServices)).
+		Msg("Syncing service definitions to Control Plane")
+
+	for name, def := range uniqueServices {
+		if err := c.SyncServiceDefinition(ctx, name, def.Tags, def.Port); err != nil {
+			log.Error().
+				Err(err).
+				Str("service", name).
+				Msg("Failed to sync individual service definition")
+			// Continue with others
+		}
+	}
+
+	return nil
+}
+
+// SyncServiceDefinition upserts a service definition via the Tailscale API
+func (c *Client) SyncServiceDefinition(ctx context.Context, serviceName string, tags []string, port string) error {
+	if !strings.HasPrefix(serviceName, "svc:") {
+		serviceName = "svc:" + serviceName
+	}
+
+	// We must fetch the existing service definition to get its assigned IP addresses (addrs).
+	var addrs []string
+	existing, err := c.getService(ctx, serviceName)
+	if err != nil {
+		return fmt.Errorf("failed to get service details: %w", err)
+	}
+
+	if existing != nil {
+		addrs = existing.Addrs
+		log.Debug().
+			Str("service", serviceName).
+			Strs("addrs", addrs).
+			Msg("Found existing service addresses, preserving in update")
+	} else {
+		log.Debug().
+			Str("service", serviceName).
+			Msg("Service does not exist, creating new (without addrs)")
+	}
+
+	url := fmt.Sprintf("%s/api/v2/tailnet/%s/services/%s", c.baseURL, c.tailnet, serviceName)
+
+	// Tailscale API requires "ports" to be present.
+	// We use the actual service port configured in DockTail.
+	// If port is empty (shouldn't happen due to defaults), fallback to 443.
+	if port == "" {
+		port = "443"
+	}
+
+	// Tailscale API requires prefix for creation
+	portStr := fmt.Sprintf("tcp:%s", port)
+
+	payload := map[string]interface{}{
+		"name":  serviceName,
+		"tags":  tags,
+		"ports": []string{portStr},
+	}
+
+	// Only include addrs if we have them (from existing service)
+	if len(addrs) > 0 {
+		payload["addrs"] = addrs
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request body: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "PUT", url, bytes.NewBuffer(body))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	log.Debug().
+		Str("method", "PUT").
+		Str("url", url).
+		RawJSON("payload", body).
+		Msg("Sending Control Plane request")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		log.Error().
+			Int("status", resp.StatusCode).
+			Str("body", string(respBody)).
+			Msg("Control Plane request failed")
+		return fmt.Errorf("API returned error status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	log.Debug().
+		Str("service", serviceName).
+		Strs("tags", tags).
+		Msg("Successfully synced service definition to Control Plane")
+
+	return nil
+}
+
+type apiService struct {
+	Addrs []string `json:"addrs"`
+}
+
+// getService fetches the existing service definition from the Tailscale API
+// Returns nil if service does not exist (404)
+func (c *Client) getService(ctx context.Context, serviceName string) (*apiService, error) {
+	url := fmt.Sprintf("%s/api/v2/tailnet/%s/services/%s", c.baseURL, c.tailnet, serviceName)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GET request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+
+	log.Debug().
+		Str("method", "GET").
+		Str("url", url).
+		Msg("Fetching existing service definition")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("GET request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("GET API returned error status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var svc apiService
+	if err := json.NewDecoder(resp.Body).Decode(&svc); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &svc, nil
 }
 
 // CleanupAllServices removes all services and funnels managed by DockTail

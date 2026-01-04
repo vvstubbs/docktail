@@ -64,21 +64,24 @@ Before installing the DockTail, configure your Tailscale admin console at https:
 2. **(Optional) Configure service tags**:
    - Navigate to Access Controls
    - Add tags for service identification (e.g., `tag:homelab-service`)
-   - Tag your Docker host (e.g., `tag:homelab`)
+   - Tag your Docker host (e.g., `tag:homelab`). **Important:** Ensure the machine running DockTail is authenticated with this tag (e.g., `tailscale up --advertise-tags=tag:homelab`).
 
 3. **(Recommended) Enable auto-approval**:
    - Navigate to Access Controls and edit your ACL policy
-   - Add auto-approvers to skip manual approval for service advertisements:
+   - Add auto-approvers to skip manual approval for service advertisements.
+   - **Why?** Without this, every new service DockTail advertises will require manual approval in the Admin Console.
    ```json
    {
      "autoApprovers": {
        "services": {
+         // Allow devices with tag:homelab to advertise services with tag:homelab-service
+         // e.g. "container tag (applied with label)" <- ["approver tag (host machine)"]
          "tag:homelab-service": ["tag:homelab"]
        }
      }
    }
    ```
-   - This allows devices tagged `tag:homelab` to automatically advertise services tagged `tag:homelab-service`
+   - **Note:** DockTail applies `DEFAULT_SERVICE_TAGS` (default: `tag:container`) to all services unless overridden by `docktail.tags`. Ensure your ACLs match these tags.
 
 See [Tailscale Services documentation](https://tailscale.com/kb/1552/tailscale-services) for detailed setup instructions.
 
@@ -219,20 +222,26 @@ services:
 - `docktail.service.port` = CONTAINER port (always the RIGHT side)
 - Result: Tailscale → localhost:8080 → Container:80
 
+**Understanding the 3 Ports:**
+1. **Container Port** (`docktail.service.port`): The port your app listens on inside the container (e.g., 80).
+2. **Published Host Port** (Docker `ports`): The port Docker maps to the host (e.g., 8080). DockTail proxies traffic to `localhost:8080`.
+3. **Tailscale Service Port** (`docktail.service.service-port`): The port clients use to connect to your service (e.g., 443). This is what gets registered in the Tailscale Control Plane.
+
 ### Available Labels
 
 #### Service Labels (Tailnet-only Access)
 
 See [Tailscale Service documentation](https://tailscale.com/kb/1552/tailscale-services) for detailed setup instructions.
 
-| Label | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `docktail.service.enable` | Yes | - | Enable DockTail for container |
-| `docktail.service.name` | Yes | - | Service name (e.g., `web`, `api-v2`) |
-| `docktail.service.port` | Yes | - | **CONTAINER** port (RIGHT side of `ports:`) |
-| `docktail.service.protocol` | No | Smart*** | Protocol container speaks: `http`, `https`, `https+insecure`, `tcp`, `tls-terminated-tcp` |
-| `docktail.service.service-port` | No | Smart* | Port Tailscale listens on |
-| `docktail.service.service-protocol` | No | Smart** | Protocol Tailscale uses: `http`, `https`, `tcp` |
+| Label                               | Required | Default                | Description                                                                               |
+| ----------------------------------- | -------- | ---------------------- | ----------------------------------------------------------------------------------------- |
+| `docktail.service.enable`           | Yes      | -                      | Enable DockTail for container                                                             |
+| `docktail.service.name`             | Yes      | -                      | Service name (e.g., `web`, `api-v2`)                                                      |
+| `docktail.service.port`             | Yes      | -                      | **CONTAINER** port (RIGHT side of `ports:`)                                               |
+| `docktail.service.protocol`         | No       | Smart***               | Protocol container speaks: `http`, `https`, `https+insecure`, `tcp`, `tls-terminated-tcp` |
+| `docktail.service.service-port`     | No       | Smart*                 | Port Tailscale listens on                                                                 |
+| `docktail.service.service-protocol` | No       | Smart**                | Protocol Tailscale uses: `http`, `https`, `tcp`                                           |
+| `docktail.tags`                     | No       | `DEFAULT_SERVICE_TAGS` | Comma-separated list of tags (e.g., `tag:web,tag:prod`)                                   |
 
 **Smart Defaults:**
 - *`service-port`: Defaults to `80`, OR `443` if `service-protocol=https`
@@ -247,12 +256,12 @@ See [Tailscale Funnel documentation](https://tailscale.com/kb/1311/tailscale-fun
 
 **Independent from serve labels**
 
-| Label | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `docktail.funnel.enable` | Yes (for funnel) | `false` | Enable Tailscale Funnel (public internet access) |
-| `docktail.funnel.port` | Yes (for funnel) | - | **CONTAINER** port (same concept as `service.port`) |
-| `docktail.funnel.funnel-port` | No | `443` | **PUBLIC** port (must be 443, 8443, or 10000 for HTTPS) |
-| `docktail.funnel.protocol` | No | `https` | Protocol: `https`, `tcp`, `tls-terminated-tcp` |
+| Label                         | Required         | Default | Description                                             |
+| ----------------------------- | ---------------- | ------- | ------------------------------------------------------- |
+| `docktail.funnel.enable`      | Yes (for funnel) | `false` | Enable Tailscale Funnel (public internet access)        |
+| `docktail.funnel.port`        | Yes (for funnel) | -       | **CONTAINER** port (same concept as `service.port`)     |
+| `docktail.funnel.funnel-port` | No               | `443`   | **PUBLIC** port (must be 443, 8443, or 10000 for HTTPS) |
+| `docktail.funnel.protocol`    | No               | `https` | Protocol: `https`, `tcp`, `tls-terminated-tcp`          |
 
 **Notes about Funnel:**
 - Funnel is independent of serve - different labels, different ports, different everything
@@ -283,12 +292,15 @@ See [Tailscale Funnel documentation](https://tailscale.com/kb/1311/tailscale-fun
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `LOG_LEVEL` | `info` | Logging level (debug, info, warn, error) |
-| `RECONCILE_INTERVAL` | `60s` | State reconciliation interval |
-| `DOCKER_HOST` | `unix:///var/run/docker.sock` | Docker daemon socket |
-| `TAILSCALE_SOCKET` | `/var/run/tailscale/tailscaled.sock` | Tailscale daemon socket |
+| Variable               | Default                              | Description                                                          |
+| ---------------------- | ------------------------------------ | -------------------------------------------------------------------- |
+| `LOG_LEVEL`            | `info`                               | Logging level (debug, info, warn, error)                             |
+| `RECONCILE_INTERVAL`   | `60s`                                | State reconciliation interval                                        |
+| `DOCKER_HOST`          | `unix:///var/run/docker.sock`        | Docker daemon socket                                                 |
+| `TAILSCALE_SOCKET`     | `/var/run/tailscale/tailscaled.sock` | Tailscale daemon socket                                              |
+| `TAILSCALE_API_KEY`    | `""` (Empty)                         | Tailscale API Key (`tskey-api-...`). If empty, API sync is disabled. |
+| `TAILSCALE_TAILNET`    | `-`                                  | Tailnet ID. Defaults to `-` (the tailnet associated with the key).   |
+| `DEFAULT_SERVICE_TAGS` | `tag:container`                      | Comma-separated list of default tags for services.                   |
 
 ## How It Works
 
@@ -298,6 +310,9 @@ See [Tailscale Funnel documentation](https://tailscale.com/kb/1311/tailscale-fun
 4. **Configuration Generation**: Creates Tailscale service configuration proxying to `localhost:HOST_PORT`
 5. **Configuration Application**: Executes Tailscale CLI commands to apply config and advertise services
 6. **Stateless Operation**: Periodically reconciles state by querying Docker and Tailscale APIs
+7. **Control Plane Sync (Optional)**: If `TAILSCALE_API_KEY` is provided, DockTail syncs service definitions to the Tailscale Control Plane (API). This ensures services exist globally with correct tags for ACLs.
+   - **Conservative Deletion**: DockTail does **NOT** delete service definitions from the API when containers stop, preventing accidental outages in HA setups.
+   - **Creation Flow**: Attempts to create new services via API. Note: If your tailnet requires pre-provisioned addresses, creation may fail, requiring manual initial creation in the Admin Console.
 
 
 ## Examples

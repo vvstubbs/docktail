@@ -1,0 +1,66 @@
+services:
+  # 1. The Tailscale Sidecar (Acts as the "Host" daemon)
+  tailscale-sidecar:
+    image: tailscale/tailscale:latest
+    container_name: tailscale-sidecar
+    hostname: docktail-test-runner
+    environment:
+      - TS_AUTHKEY=${TAILSCALE_AUTH_KEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SOCKET=/var/run/tailscale/tailscaled.sock
+      - TS_USERSPACE=false
+    volumes:
+      - tailscale-socket:/var/run/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "test", "-S", "/var/run/tailscale/tailscaled.sock"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  # 2. The DockTail instance being tested
+  docktail:
+    build: .
+    container_name: docktail-test
+    depends_on:
+      tailscale-sidecar:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Connect to the sidecar's socket - works on macOS and Linux
+      - tailscale-socket:/var/run/tailscale
+    environment:
+      - LOG_LEVEL=debug
+      - RECONCILE_INTERVAL=10s
+      # --- Control Plane Sync Configuration ---
+      - TAILSCALE_API_KEY=${TAILSCALE_API_KEY}
+      - TAILSCALE_TAILNET=${TAILSCALE_TAILNET:-}
+      - DEFAULT_SERVICE_TAGS=${DEFAULT_SERVICE_TAGS:-tag:container}
+
+  # 3. A test service to verify sync
+  test-service:
+    image: nginx:alpine
+    container_name: docktail-test-service
+    ports:
+      - "5386:80"
+    labels:
+      # --- Tailscale Serve Config (Local Traffic) ---
+      - "docktail.service.enable=true"
+      - "docktail.service.name=docktail-test-svc"    # Service name (e.g., https://docktail-test-svc.tailnet.ts.net)
+      - "docktail.service.port=80"                   # Container port (traffic destination)
+      - "docktail.service.protocol=http"             # Container protocol (http/https/tcp)
+      - "docktail.service.service-port=443"          # Tailscale listener port
+      - "docktail.service.service-protocol=https"    # Tailscale listener protocol (auto-TLS)
+
+      # --- Control Plane Sync Config (API Registration) ---
+      # Registers the service in the Tailscale Admin Console with these tags.
+      # If omitted, defaults to DEFAULT_SERVICE_TAGS env var.
+      - "docktail.tags=tag:docktail-test"
+
+volumes:
+  tailscale-socket:
