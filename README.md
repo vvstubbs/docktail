@@ -115,51 +115,25 @@ docker run -d \
   ghcr.io/marvinvr/docktail:latest
 ```
 
-#### Option 3: Docker Compose with Containerized Tailscale
+#### Option 3: Docker Compose with Containerized Tailscale (Sidecar)
 
-For configurations running `tailscaled` in a container rather than directly on the host, the Tailscale socket needs to be shared between DockTail and Tailscale. This can be achieved using a shared volume.
+For systems without Tailscale installed directly on the host (e.g., macOS, NAS devices), use the provided sidecar compose file:
 
-As long as the Tailscale container is running in `network_mode: host`, it will still see the container ports correctly on localhost.
+```bash
+# 1. Configure your Tailscale auth key
+cp .env.example .env
+# Edit .env and set TAILSCALE_AUTH_KEY
 
-```yaml
-version: '3.8'
-
-services:
-  tailscale:
-    image: tailscale/tailscale:latest
-    container_name: tailscale
-    restart: unless-stopped
-    volumes:
-      - /dev/net/tun:/dev/net/tun
-      - ts_sock:/tmp
-    network_mode: host
-    environment:
-      - TS_AUTHKEY=your-auth-key  # Replace with your Tailscale auth key
-      - TS_STATE_DIR=/var/lib/tailscale
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-
-  docktail:
-    image: ghcr.io/marvinvr/docktail:latest
-    container_name: docktail
-    restart: unless-stopped
-    network_mode: service:tailscale
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ts_sock:/var/run/tailscale
-
-volumes:
-  ts_sock:
-    driver: local
+# 2. Start DockTail with containerized Tailscale
+docker compose -f docker-compose.sidecar.yaml up -d
 ```
 
+See `docker-compose.sidecar.yaml` for the full configuration.
+
 **Key points:**
-- The `ts_sock` volume is shared between both containers
-- Tailscale container mounts the volume at `/tmp` (where it creates `tailscaled.sock`)
-- DockTail mounts the volume at `/var/run/tailscale` (its default socket location)
-- Tailscale runs in `network_mode: host` to access container ports on localhost
-- DockTail uses `network_mode: service:tailscale` to share Tailscale's network namespace
+- Tailscale runs in a container with `network_mode: host` to access container ports on localhost
+- A shared volume connects DockTail to the Tailscale socket
+- State is persisted so Tailscale doesn't need to re-authenticate on restart
 
 ### Usage
 
@@ -449,6 +423,44 @@ curl https://app.your-tailnet.ts.net
 # Public internet (funnel):
 curl https://your-machine-name.your-tailnet.ts.net:8443
 ```
+
+## Testing Control Plane Sync
+
+To manually verify the Control Plane Sync feature:
+
+### Prerequisites
+
+1. **Tailscale API Key:** Generate at [Tailscale Admin Console > Settings > Keys](https://login.tailscale.com/admin/settings/keys)
+2. **Docker & Tailscale:** Ensure Docker is running and Tailscale is installed/authenticated on your host
+
+### Setup & Run
+
+1. **Configure environment:**
+   ```bash
+   cp .env.example .env
+   # Edit .env and add your TAILSCALE_API_KEY
+   ```
+
+2. **Start the test stack:**
+   ```bash
+   docker compose -f docker-compose.console-sync.yaml up --build
+   ```
+
+3. **Verify in logs:** Watch for:
+   - `Configuration loaded` with `api_sync_enabled=true`
+   - `Syncing service definitions to Control Plane`
+   - `Successfully synced service definition to Control Plane`
+
+4. **Verify in Tailscale Console:**
+   - Go to [Tailscale Admin Console > Services](https://login.tailscale.com/admin/services)
+   - Look for the test service with configured tags
+
+5. **Cleanup:**
+   ```bash
+   docker compose -f docker-compose.console-sync.yaml down
+   ```
+
+**Note:** DockTail uses a **Conservative Deletion Strategy** - stopping containers will NOT remove service definitions from the Tailscale Admin Console. You must manually delete them if needed.
 
 ## Building from Source
 

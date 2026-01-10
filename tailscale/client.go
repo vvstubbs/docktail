@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -249,8 +250,10 @@ func (c *Client) syncServiceDefinitions(ctx context.Context, services []*apptype
 		Int("unique_services", len(uniqueServices)).
 		Msg("Syncing service definitions to Control Plane")
 
+	var failed []string
 	for name, def := range uniqueServices {
 		if err := c.SyncServiceDefinition(ctx, name, def.Tags, def.Port); err != nil {
+			failed = append(failed, name)
 			log.Error().
 				Err(err).
 				Str("service", name).
@@ -259,39 +262,45 @@ func (c *Client) syncServiceDefinitions(ctx context.Context, services []*apptype
 		}
 	}
 
+	if len(failed) > 0 {
+		return fmt.Errorf("failed to sync %d service(s) to Control Plane: %v", len(failed), failed)
+	}
+
 	return nil
 }
 
-// SyncServiceDefinition upserts a service definition via the Tailscale API
+// SyncServiceDefinition ensures a service definition exists in the Tailscale API.
+// Only creates if the service doesn't exist. Does NOT update existing services.
 func (c *Client) SyncServiceDefinition(ctx context.Context, serviceName string, tags []string, port string) error {
 	if !strings.HasPrefix(serviceName, "svc:") {
 		serviceName = "svc:" + serviceName
 	}
 
-	// We must fetch the existing service definition to get its assigned IP addresses (addrs).
-	var addrs []string
+	// Check if service already exists
 	existing, err := c.getService(ctx, serviceName)
 	if err != nil {
 		return fmt.Errorf("failed to get service details: %w", err)
 	}
 
+	// If service already exists, skip creation
 	if existing != nil {
-		addrs = existing.Addrs
 		log.Debug().
 			Str("service", serviceName).
-			Strs("addrs", addrs).
-			Msg("Found existing service addresses, preserving in update")
-	} else {
-		log.Debug().
-			Str("service", serviceName).
-			Msg("Service does not exist, creating new (without addrs)")
+			Strs("existing_tags", existing.Tags).
+			Strs("existing_ports", existing.Ports).
+			Msg("Service already exists in Control Plane, skipping creation")
+		return nil
 	}
 
-	url := fmt.Sprintf("%s/api/v2/tailnet/%s/services/%s", c.baseURL, c.tailnet, serviceName)
+	// Service doesn't exist, create it
+	log.Info().
+		Str("service", serviceName).
+		Strs("tags", tags).
+		Msg("Creating new service definition in Control Plane")
+
+	apiURL := fmt.Sprintf("%s/api/v2/tailnet/%s/services/%s", c.baseURL, url.PathEscape(c.tailnet), url.PathEscape(serviceName))
 
 	// Tailscale API requires "ports" to be present.
-	// We use the actual service port configured in DockTail.
-	// If port is empty (shouldn't happen due to defaults), fallback to 443.
 	if port == "" {
 		port = "443"
 	}
@@ -305,17 +314,12 @@ func (c *Client) SyncServiceDefinition(ctx context.Context, serviceName string, 
 		"ports": []string{portStr},
 	}
 
-	// Only include addrs if we have them (from existing service)
-	if len(addrs) > 0 {
-		payload["addrs"] = addrs
-	}
-
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request body: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "PUT", url, bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, "PUT", apiURL, bytes.NewBuffer(body))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -325,7 +329,7 @@ func (c *Client) SyncServiceDefinition(ctx context.Context, serviceName string, 
 
 	log.Debug().
 		Str("method", "PUT").
-		Str("url", url).
+		Str("url", apiURL).
 		RawJSON("payload", body).
 		Msg("Sending Control Plane request")
 
@@ -344,24 +348,26 @@ func (c *Client) SyncServiceDefinition(ctx context.Context, serviceName string, 
 		return fmt.Errorf("API returned error status %d: %s", resp.StatusCode, string(respBody))
 	}
 
-	log.Debug().
+	log.Info().
 		Str("service", serviceName).
 		Strs("tags", tags).
-		Msg("Successfully synced service definition to Control Plane")
+		Msg("Successfully created service definition in Control Plane")
 
 	return nil
 }
 
 type apiService struct {
 	Addrs []string `json:"addrs"`
+	Tags  []string `json:"tags"`
+	Ports []string `json:"ports"`
 }
 
 // getService fetches the existing service definition from the Tailscale API
 // Returns nil if service does not exist (404)
 func (c *Client) getService(ctx context.Context, serviceName string) (*apiService, error) {
-	url := fmt.Sprintf("%s/api/v2/tailnet/%s/services/%s", c.baseURL, c.tailnet, serviceName)
+	apiURL := fmt.Sprintf("%s/api/v2/tailnet/%s/services/%s", c.baseURL, url.PathEscape(c.tailnet), url.PathEscape(serviceName))
 
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GET request: %w", err)
 	}
@@ -370,7 +376,7 @@ func (c *Client) getService(ctx context.Context, serviceName string) (*apiServic
 
 	log.Debug().
 		Str("method", "GET").
-		Str("url", url).
+		Str("url", apiURL).
 		Msg("Fetching existing service definition")
 
 	resp, err := c.httpClient.Do(req)

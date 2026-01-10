@@ -299,9 +299,16 @@ func (c *Client) parseContainer(ctx context.Context, containerID string, labels 
 	var tags []string
 	if tagsStr := labels[apptypes.LabelTags]; tagsStr != "" {
 		// Split by comma and trim spaces
-		parts := strings.SplitSeq(tagsStr, ",")
-		for part := range parts {
+		parts := strings.Split(tagsStr, ",")
+		for _, part := range parts {
 			if trimmed := strings.TrimSpace(part); trimmed != "" {
+				// Warn if tag doesn't follow Tailscale convention
+				if !strings.HasPrefix(trimmed, "tag:") {
+					log.Warn().
+						Str("container", containerName).
+						Str("tag", trimmed).
+						Msg("Tag should start with 'tag:' prefix per Tailscale convention")
+				}
 				tags = append(tags, trimmed)
 			}
 		}
