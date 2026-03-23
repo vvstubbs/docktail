@@ -233,7 +233,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
           <h2 id="oauth" class="text-lg font-semibold text-gray-900 mb-3">OAuth Credentials <span class="text-xs font-normal text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded ml-2">Recommended</span></h2>
           <p class="text-sm text-gray-500 mb-4">OAuth lets DockTail auto-create services in your Tailscale Admin Console. No manual setup required.</p>
 
-          <ol class="text-sm text-gray-500 mb-4 space-y-2 list-decimal list-inside">
+          <ol class="text-sm text-gray-500 mb-4 space-y-2 list-decimal pl-5">
             <li>Go to <a href="https://login.tailscale.com/admin/settings/oauth" class="text-gray-900 underline underline-offset-2">Tailscale Admin &rarr; Settings &rarr; OAuth clients</a></li>
             <li>Create a new OAuth client with these permissions, scoped to your server tag:
               <ul class="mt-1 ml-6 space-y-1 list-disc">
@@ -259,7 +259,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
           <h2 id="api-key" class="text-lg font-semibold text-gray-900 mb-3">API Key</h2>
           <p class="text-sm text-gray-500 mb-4">Also auto-creates services, but expires every 90 days.</p>
 
-          <ol class="text-sm text-gray-500 mb-4 space-y-2 list-decimal list-inside">
+          <ol class="text-sm text-gray-500 mb-4 space-y-2 list-decimal pl-5">
             <li>Go to <a href="https://login.tailscale.com/admin/settings/keys" class="text-gray-900 underline underline-offset-2">Tailscale Admin &rarr; Settings &rarr; Keys</a></li>
             <li>Generate an API key</li>
             <li>Add to your DockTail environment:</li>
@@ -274,7 +274,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
           <h2 id="manual-mode" class="text-lg font-semibold text-gray-900 mb-3">No Credentials (Manual Mode)</h2>
           <p class="text-sm text-gray-500 mb-4">DockTail works without any credentials for basic use. Services are advertised locally via the Tailscale CLI, but you must manually create service definitions in the Admin Console.</p>
 
-          <ol class="text-sm text-gray-500 space-y-2 list-decimal list-inside">
+          <ol class="text-sm text-gray-500 space-y-2 list-decimal pl-5">
             <li>Go to <a href="https://login.tailscale.com/admin/services" class="text-gray-900 underline underline-offset-2">Tailscale Admin &rarr; Services</a></li>
             <li>Create a service for each container you want to expose</li>
             <li>Configure ACL auto-approvers (see <a href="#acl-configuration" class="text-gray-900 underline underline-offset-2">ACL Configuration</a>)</li>
@@ -309,7 +309,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
           </div>
 
           <p class="text-sm text-gray-500 mb-2 font-semibold text-gray-700">How the tags work:</p>
-          <ul class="text-sm text-gray-500 mb-10 space-y-1 list-disc list-inside">
+          <ul class="text-sm text-gray-500 mb-10 space-y-1 list-disc pl-5">
             <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">tag:server</code> — assigned to the host machine (or sidecar auth key). Identifies <em>who</em> can advertise services.</li>
             <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">tag:container</code> — default tag DockTail assigns to services. Identifies <em>what</em> is being advertised.</li>
           </ul>
@@ -317,7 +317,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
           <h2 id="approve-services" class="text-lg font-semibold text-gray-900 mb-3">Approve Services</h2>
           <p class="text-sm text-gray-500 mb-4">The first time a new service is advertised, it must be manually approved:</p>
 
-          <ol class="text-sm text-gray-500 mb-4 space-y-2 list-decimal list-inside">
+          <ol class="text-sm text-gray-500 mb-4 space-y-2 list-decimal pl-5">
             <li>Go to the <a href="https://login.tailscale.com/admin/services" class="text-gray-900 underline underline-offset-2">Services tab</a></li>
             <li>Find the newly advertised service</li>
             <li>Approve it to allow traffic</li>
@@ -351,7 +351,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
           <h2 id="service-labels" class="text-lg font-semibold text-gray-900 mb-4">Service Labels</h2>
 
           <div class="overflow-x-auto mb-4">
-            <table class="w-full text-sm border border-gray-200 rounded-md overflow-hidden">
+            <table class="w-full min-w-[600px] text-sm border border-gray-200 rounded-md overflow-hidden">
               <thead class="bg-gray-100 text-gray-900 text-left">
                 <tr>
                   <th class="px-4 py-2.5 font-semibold">Label</th>
@@ -421,7 +421,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
 
           <div class="text-sm text-gray-500 mb-10">
             <p class="font-semibold text-gray-700 mb-1">Smart Defaults:</p>
-            <ul class="space-y-1 list-disc list-inside">
+            <ul class="space-y-1 list-disc pl-5">
               <li><strong class="text-gray-600">*</strong> <code class="text-xs">protocol</code>: <code class="text-xs">https</code> if container port is 443, otherwise <code class="text-xs">http</code></li>
               <li><strong class="text-gray-600">**</strong> <code class="text-xs">service-port</code>: <code class="text-xs">443</code> if service-protocol is <code class="text-xs">https</code>, otherwise <code class="text-xs">80</code></li>
               <li><strong class="text-gray-600">***</strong> <code class="text-xs">service-protocol</code>: <code class="text-xs">https</code> if service-port is 443, matches protocol for TCP, otherwise <code class="text-xs">http</code></li>
@@ -432,7 +432,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
           <p class="text-sm text-gray-500 mb-4">Funnel exposes your service to the public internet. Independent from service labels.</p>
 
           <div class="overflow-x-auto mb-4">
-            <table class="w-full text-sm border border-gray-200 rounded-md overflow-hidden">
+            <table class="w-full min-w-[600px] text-sm border border-gray-200 rounded-md overflow-hidden">
               <thead class="bg-gray-100 text-gray-900 text-left">
                 <tr>
                   <th class="px-4 py-2.5 font-semibold">Label</th>
@@ -472,7 +472,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
 
           <div class="text-sm text-gray-500">
             <p class="font-semibold text-gray-700 mb-1">Notes:</p>
-            <ul class="space-y-1 list-disc list-inside">
+            <ul class="space-y-1 list-disc pl-5">
               <li>Only one funnel per port (Tailscale limitation)</li>
               <li>Uses machine hostname, not service name: <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">https://&lt;machine&gt;.&lt;tailnet&gt;.ts.net</code></li>
             </ul>
@@ -590,7 +590,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
           </div>
           <div class="text-sm text-gray-500">
             <p>Access:</p>
-            <ul class="list-disc list-inside mt-1">
+            <ul class="list-disc pl-5 mt-1">
               <li>Tailnet: <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">https://website.your-tailnet.ts.net</code></li>
               <li>Public: <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">https://your-machine.your-tailnet.ts.net</code></li>
             </ul>
@@ -604,7 +604,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
           <h2 id="env-vars" class="text-lg font-semibold text-gray-900 mb-4">Environment Variables</h2>
 
           <div class="overflow-x-auto mb-4">
-            <table class="w-full text-sm border border-gray-200 rounded-md overflow-hidden">
+            <table class="w-full min-w-[600px] text-sm border border-gray-200 rounded-md overflow-hidden">
               <thead class="bg-gray-100 text-gray-900 text-left">
                 <tr>
                   <th class="px-4 py-2.5 font-semibold">Variable</th>
@@ -722,7 +722,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
                └─────────────────────┘</code></pre>
           </div>
 
-          <ol class="text-sm text-gray-500 space-y-2 list-decimal list-inside mb-6">
+          <ol class="text-sm text-gray-500 space-y-2 list-decimal pl-5 mb-6">
             <li><span class="text-gray-700 font-semibold">Container Discovery</span> — Monitors Docker events for container start/stop</li>
             <li><span class="text-gray-700 font-semibold">Label Parsing</span> — Extracts service configuration from container labels</li>
             <li><span class="text-gray-700 font-semibold">IP Detection</span> — Gets container IP from Docker network settings (default: bridge)</li>
@@ -734,7 +734,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
 
           <div class="text-sm text-gray-500">
             <p class="font-semibold text-gray-700 mb-1">Notes:</p>
-            <ul class="space-y-1 list-disc list-inside">
+            <ul class="space-y-1 list-disc pl-5">
               <li>DockTail does NOT delete service definitions from the API when containers stop (conservative deletion strategy)</li>
               <li>Container IP changes on restart are handled automatically during reconciliation</li>
             </ul>
