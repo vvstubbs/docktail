@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docs — DockTail</title>
+  <meta name="description" content="Documentation for DockTail — automatically expose Docker containers as Tailscale Services using label-based configuration.">
+  <meta property="og:title" content="Docs — DockTail">
+  <meta property="og:description" content="Documentation for DockTail — automatically expose Docker containers as Tailscale Services using label-based configuration.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://docktail.org/docs/">
+  <meta property="og:image" content="https://docktail.org/assets/og-image.jpeg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Docs — DockTail">
+  <meta name="twitter:description" content="Documentation for DockTail — automatically expose Docker containers as Tailscale Services.">
+  <meta name="twitter:image" content="https://docktail.org/assets/og-image.jpeg">
+  <meta name="author" content="marvinvr">
+  <meta name="keywords" content="docker, tailscale, containers, service mesh, tailnet, networking, devops, documentation">
+  <link rel="canonical" href="https://docktail.org/docs/">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍸</text></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
+    .sidebar-link.active { color: #111827; background-color: #f3f4f6; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-mono min-h-screen">
+
+  <!-- Nav -->
+  <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-6">
+        <a href="/" class="text-lg font-bold tracking-tight text-gray-900">docktail</a>
+        <span class="text-gray-300">/</span>
+        <span class="text-sm text-gray-500">docs</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <!-- Mobile menu toggle -->
+        <button id="sidebar-toggle" class="lg:hidden text-gray-500 hover:text-gray-900 transition-colors">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <a href="https://github.com/marvinvr/docktail" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">github</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex gap-8">
+
+      <!-- Sidebar -->
+      <aside id="sidebar" class="hidden lg:block w-64 flex-shrink-0">
+        <div class="sticky top-14 overflow-y-auto h-[calc(100vh-3.5rem)] py-8 pr-4">
+          <nav class="space-y-1 text-sm">
+            <a href="#quick-start" class="sidebar-link block px-3 py-1.5 rounded text-gray-500 hover:text-gray-900 transition-colors font-semibold">Quick Start</a>
+
+            <div class="pt-3">
+              <a href="#installation" class="sidebar-link block px-3 py-1.5 rounded text-gray-500 hover:text-gray-900 transition-colors font-semibold">Installation</a>
+              <a href="#tailscale-on-host" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">Tailscale on Host</a>
+              <a href="#tailscale-sidecar" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">Tailscale Sidecar</a>
+            </div>
+
+            <div class="pt-3">
+              <a href="#configuration" class="sidebar-link block px-3 py-1.5 rounded text-gray-500 hover:text-gray-900 transition-colors font-semibold">Configuration</a>
+              <a href="#oauth" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">OAuth (Recommended)</a>
+              <a href="#api-key" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">API Key</a>
+              <a href="#manual-mode" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">Manual Mode</a>
+            </div>
+
+            <div class="pt-3">
+              <a href="#admin-setup" class="sidebar-link block px-3 py-1.5 rounded text-gray-500 hover:text-gray-900 transition-colors font-semibold">Admin Setup</a>
+              <a href="#acl-configuration" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">ACL Configuration</a>
+              <a href="#approve-services" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">Approve Services</a>
+            </div>
+
+            <div class="pt-3">
+              <a href="#labeling" class="sidebar-link block px-3 py-1.5 rounded text-gray-500 hover:text-gray-900 transition-colors font-semibold">Labeling Containers</a>
+              <a href="#direct-ip" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">Direct IP Proxying</a>
+              <a href="#service-labels" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">Service Labels</a>
+              <a href="#funnel-labels" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">Funnel Labels</a>
+            </div>
+
+            <div class="pt-3">
+              <a href="#examples" class="sidebar-link block px-3 py-1.5 rounded text-gray-500 hover:text-gray-900 transition-colors font-semibold">Examples</a>
+              <a href="#ex-web" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">Web Application</a>
+              <a href="#ex-https" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">HTTPS with Auto TLS</a>
+              <a href="#ex-tcp" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">Database (TCP)</a>
+              <a href="#ex-multi" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">Multiple Services</a>
+              <a href="#ex-network" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">Custom Network</a>
+              <a href="#ex-legacy" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">Legacy Mode</a>
+              <a href="#ex-funnel" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">Public Funnel</a>
+            </div>
+
+            <div class="pt-3">
+              <a href="#reference" class="sidebar-link block px-3 py-1.5 rounded text-gray-500 hover:text-gray-900 transition-colors font-semibold">Reference</a>
+              <a href="#env-vars" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">Environment Variables</a>
+              <a href="#protocols" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">Supported Protocols</a>
+            </div>
+
+            <div class="pt-3">
+              <a href="#how-it-works" class="sidebar-link block px-3 py-1.5 rounded text-gray-500 hover:text-gray-900 transition-colors font-semibold">How It Works</a>
+            </div>
+          </nav>
+        </div>
+      </aside>
+
+      <!-- Content -->
+      <main class="flex-1 min-w-0 py-8 lg:py-12 max-w-3xl">
+
+        <!-- Quick Start -->
+        <section id="quick-start" class="mb-16">
+          <h1 class="text-2xl font-bold text-gray-900 mb-4">Quick Start</h1>
+          <p class="text-sm text-gray-500 mb-6">Get DockTail running in under a minute. Add it to your Docker Compose file alongside your services.</p>
+
+          <div class="relative group mb-4">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
+            <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">services</span><span class="text-gray-300">:</span>
+  <span class="text-blue-400">docktail</span><span class="text-gray-300">:</span>
+    <span class="text-blue-400">image</span><span class="text-gray-300">: </span><span class="text-green-400">ghcr.io/marvinvr/docktail:latest</span>
+    <span class="text-blue-400">restart</span><span class="text-gray-300">: </span><span class="text-green-400">unless-stopped</span>
+    <span class="text-blue-400">volumes</span><span class="text-gray-300">:</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">/var/run/docker.sock:/var/run/docker.sock:ro</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">/var/run/tailscale:/var/run/tailscale</span>
+    <span class="text-blue-400">environment</span><span class="text-gray-300">:</span>
+      <span class="text-gray-600"># Optional but recommended - enables auto-service-creation</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">TAILSCALE_OAUTH_CLIENT_ID=${TAILSCALE_OAUTH_CLIENT_ID}</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">TAILSCALE_OAUTH_CLIENT_SECRET=${TAILSCALE_OAUTH_CLIENT_SECRET}</span>
+
+  <span class="text-blue-400">myapp</span><span class="text-gray-300">:</span>
+    <span class="text-blue-400">image</span><span class="text-gray-300">: </span><span class="text-green-400">nginx:latest</span>
+    <span class="text-gray-600"># No ports needed! DockTail proxies directly to container IP</span>
+    <span class="text-blue-400">labels</span><span class="text-gray-300">:</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.enable=true"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.name=myapp"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.port=80"</span></code></pre>
+          </div>
+
+          <div class="relative group mb-6">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
+            <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code>docker compose up -d
+curl http://myapp.your-tailnet.ts.net</code></pre>
+          </div>
+
+          <p class="text-sm text-gray-500">That's it! See <a href="#configuration" class="text-gray-900 underline underline-offset-2">Configuration</a> for OAuth setup (recommended) or running without credentials.</p>
+        </section>
+
+        <!-- Installation -->
+        <section id="installation" class="mb-16">
+          <h1 class="text-2xl font-bold text-gray-900 mb-8">Installation</h1>
+
+          <h2 id="tailscale-on-host" class="text-lg font-semibold text-gray-900 mb-3">Tailscale on Host</h2>
+          <p class="text-sm text-gray-500 mb-4">For systems with Tailscale already installed on the host:</p>
+
+          <div class="relative group mb-4">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
+            <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">services</span><span class="text-gray-300">:</span>
+  <span class="text-blue-400">docktail</span><span class="text-gray-300">:</span>
+    <span class="text-blue-400">image</span><span class="text-gray-300">: </span><span class="text-green-400">ghcr.io/marvinvr/docktail:latest</span>
+    <span class="text-blue-400">restart</span><span class="text-gray-300">: </span><span class="text-green-400">unless-stopped</span>
+    <span class="text-blue-400">volumes</span><span class="text-gray-300">:</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">/var/run/docker.sock:/var/run/docker.sock:ro</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">/var/run/tailscale:/var/run/tailscale</span>
+    <span class="text-blue-400">environment</span><span class="text-gray-300">:</span>
+      <span class="text-gray-600"># Optional but recommended - enables auto-service-creation</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">TAILSCALE_OAUTH_CLIENT_ID=${TAILSCALE_OAUTH_CLIENT_ID}</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">TAILSCALE_OAUTH_CLIENT_SECRET=${TAILSCALE_OAUTH_CLIENT_SECRET}</span></code></pre>
+          </div>
+
+          <div class="bg-white border border-gray-200 rounded-md p-4 text-sm text-gray-500 mb-6">
+            <span class="font-semibold text-gray-700">Note:</span> We mount the <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">/var/run/tailscale</code> directory rather than the socket file directly. When <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">tailscaled</code> restarts, it recreates the socket with a new inode — a file bind mount would go stale, but a directory mount stays in sync.
+          </div>
+
+          <p class="text-sm text-gray-500 mb-3">The host machine must advertise a tag that matches your ACL auto-approvers (see <a href="#admin-setup" class="text-gray-900 underline underline-offset-2">Admin Setup</a>):</p>
+
+          <div class="relative group mb-4">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
+            <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code>sudo tailscale up --advertise-tags=tag:server --reset</code></pre>
+          </div>
+
+          <div class="bg-amber-50 border border-amber-200 rounded-md p-4 text-sm text-amber-800 mb-10">
+            <span class="font-semibold">Warning:</span> The <code class="bg-amber-100 px-1.5 py-0.5 rounded text-xs">--reset</code> flag briefly drops the Tailscale connection. If connected via SSH over Tailscale, your session will be interrupted momentarily.
+          </div>
+
+          <h2 id="tailscale-sidecar" class="text-lg font-semibold text-gray-900 mb-3">Tailscale Sidecar</h2>
+          <p class="text-sm text-gray-500 mb-4">For systems without Tailscale on the host — runs Tailscale as a container:</p>
+
+          <div class="relative group mb-4">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
+            <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">services</span><span class="text-gray-300">:</span>
+  <span class="text-blue-400">tailscale</span><span class="text-gray-300">:</span>
+    <span class="text-blue-400">image</span><span class="text-gray-300">: </span><span class="text-green-400">tailscale/tailscale:latest</span>
+    <span class="text-blue-400">hostname</span><span class="text-gray-300">: </span><span class="text-green-400">docktail-host</span>
+    <span class="text-blue-400">environment</span><span class="text-gray-300">:</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">TS_AUTHKEY=${TAILSCALE_AUTH_KEY}</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">TS_EXTRA_ARGS=--advertise-tags=tag:server</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">TS_STATE_DIR=/var/lib/tailscale</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">TS_SOCKET=/var/run/tailscale/tailscaled.sock</span>
+    <span class="text-blue-400">volumes</span><span class="text-gray-300">:</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">tailscale-state:/var/lib/tailscale</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">tailscale-socket:/var/run/tailscale</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">/dev/net/tun:/dev/net/tun</span>
+    <span class="text-blue-400">cap_add</span><span class="text-gray-300">:</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">NET_ADMIN</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">SYS_MODULE</span>
+    <span class="text-blue-400">network_mode</span><span class="text-gray-300">: </span><span class="text-green-400">host</span>
+    <span class="text-blue-400">restart</span><span class="text-gray-300">: </span><span class="text-green-400">unless-stopped</span>
+
+  <span class="text-blue-400">docktail</span><span class="text-gray-300">:</span>
+    <span class="text-blue-400">image</span><span class="text-gray-300">: </span><span class="text-green-400">ghcr.io/marvinvr/docktail:latest</span>
+    <span class="text-blue-400">depends_on</span><span class="text-gray-300">:</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">tailscale</span>
+    <span class="text-blue-400">restart</span><span class="text-gray-300">: </span><span class="text-green-400">unless-stopped</span>
+    <span class="text-blue-400">volumes</span><span class="text-gray-300">:</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">/var/run/docker.sock:/var/run/docker.sock:ro</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">tailscale-socket:/var/run/tailscale</span>
+    <span class="text-blue-400">environment</span><span class="text-gray-300">:</span>
+      <span class="text-gray-600"># Optional but recommended - enables auto-service-creation</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">TAILSCALE_OAUTH_CLIENT_ID=${TAILSCALE_OAUTH_CLIENT_ID}</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">TAILSCALE_OAUTH_CLIENT_SECRET=${TAILSCALE_OAUTH_CLIENT_SECRET}</span>
+
+<span class="text-blue-400">volumes</span><span class="text-gray-300">:</span>
+  <span class="text-blue-400">tailscale-state</span><span class="text-gray-300">:</span>
+  <span class="text-blue-400">tailscale-socket</span><span class="text-gray-300">:</span></code></pre>
+          </div>
+
+          <p class="text-sm text-gray-500">Set <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">TAILSCALE_AUTH_KEY</code> to authenticate the Tailscale container (generate at <a href="https://login.tailscale.com/admin/settings/keys" class="text-gray-900 underline underline-offset-2">Tailscale Admin &rarr; Settings &rarr; Keys</a>). The sidecar must advertise <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">tag:server</code> so it can satisfy the ACL auto-approver.</p>
+        </section>
+
+        <!-- Configuration -->
+        <section id="configuration" class="mb-16">
+          <h1 class="text-2xl font-bold text-gray-900 mb-4">Configuration</h1>
+          <p class="text-sm text-gray-500 mb-8">DockTail works in three modes. Choose based on your needs.</p>
+
+          <h2 id="oauth" class="text-lg font-semibold text-gray-900 mb-3">OAuth Credentials <span class="text-xs font-normal text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded ml-2">Recommended</span></h2>
+          <p class="text-sm text-gray-500 mb-4">OAuth lets DockTail auto-create services in your Tailscale Admin Console. No manual setup required.</p>
+
+          <ol class="text-sm text-gray-500 mb-4 space-y-2 list-decimal list-inside">
+            <li>Go to <a href="https://login.tailscale.com/admin/settings/oauth" class="text-gray-900 underline underline-offset-2">Tailscale Admin &rarr; Settings &rarr; OAuth clients</a></li>
+            <li>Create a new OAuth client with these permissions, scoped to your server tag:
+              <ul class="mt-1 ml-6 space-y-1 list-disc">
+                <li><span class="text-gray-700 font-semibold">General &rarr; Services</span>: Write</li>
+                <li><span class="text-gray-700 font-semibold">Devices &rarr; Core</span>: Write</li>
+                <li><span class="text-gray-700 font-semibold">Keys &rarr; Auth Keys</span>: Write <span class="text-gray-400">(sidecar method only)</span></li>
+              </ul>
+            </li>
+            <li>Add to your DockTail environment:</li>
+          </ol>
+
+          <div class="relative group mb-4">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
+            <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">environment</span><span class="text-gray-300">:</span>
+  <span class="text-gray-300">- </span><span class="text-green-400">TAILSCALE_OAUTH_CLIENT_ID=your-client-id</span>
+  <span class="text-gray-300">- </span><span class="text-green-400">TAILSCALE_OAUTH_CLIENT_SECRET=your-client-secret</span></code></pre>
+          </div>
+
+          <div class="text-sm text-gray-500 mb-10">
+            <span class="text-gray-700 font-semibold">Benefits:</span> Services auto-created when containers start. Never expires (unlike API keys). Proper tag-based ACL support.
+          </div>
+
+          <h2 id="api-key" class="text-lg font-semibold text-gray-900 mb-3">API Key</h2>
+          <p class="text-sm text-gray-500 mb-4">Also auto-creates services, but expires every 90 days.</p>
+
+          <ol class="text-sm text-gray-500 mb-4 space-y-2 list-decimal list-inside">
+            <li>Go to <a href="https://login.tailscale.com/admin/settings/keys" class="text-gray-900 underline underline-offset-2">Tailscale Admin &rarr; Settings &rarr; Keys</a></li>
+            <li>Generate an API key</li>
+            <li>Add to your DockTail environment:</li>
+          </ol>
+
+          <div class="relative group mb-10">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
+            <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">environment</span><span class="text-gray-300">:</span>
+  <span class="text-gray-300">- </span><span class="text-green-400">TAILSCALE_API_KEY=tskey-api-...</span></code></pre>
+          </div>
+
+          <h2 id="manual-mode" class="text-lg font-semibold text-gray-900 mb-3">No Credentials (Manual Mode)</h2>
+          <p class="text-sm text-gray-500 mb-4">DockTail works without any credentials for basic use. Services are advertised locally via the Tailscale CLI, but you must manually create service definitions in the Admin Console.</p>
+
+          <ol class="text-sm text-gray-500 space-y-2 list-decimal list-inside">
+            <li>Go to <a href="https://login.tailscale.com/admin/services" class="text-gray-900 underline underline-offset-2">Tailscale Admin &rarr; Services</a></li>
+            <li>Create a service for each container you want to expose</li>
+            <li>Configure ACL auto-approvers (see <a href="#acl-configuration" class="text-gray-900 underline underline-offset-2">ACL Configuration</a>)</li>
+          </ol>
+        </section>
+
+        <!-- Admin Setup -->
+        <section id="admin-setup" class="mb-16">
+          <h1 class="text-2xl font-bold text-gray-900 mb-4">Admin Setup</h1>
+          <p class="text-sm text-gray-500 mb-8">After deploying DockTail, configure your <a href="https://login.tailscale.com/admin" class="text-gray-900 underline underline-offset-2">Tailscale Admin Console</a> for services to work.</p>
+
+          <h2 id="acl-configuration" class="text-lg font-semibold text-gray-900 mb-3">ACL Configuration</h2>
+          <p class="text-sm text-gray-500 mb-4">Services require <strong class="text-gray-700">tag definitions</strong> in <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">tagOwners</code> and <strong class="text-gray-700">auto-approvers</strong> to allow the host to advertise them. Go to <a href="https://login.tailscale.com/admin/acls" class="text-gray-900 underline underline-offset-2">Access Controls</a> and add both blocks:</p>
+
+          <div class="relative group mb-4">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
+            <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code>{
+  <span class="text-blue-400">"tagOwners"</span>: {
+    <span class="text-blue-400">"tag:server"</span>: [<span class="text-green-400">"autogroup:admin"</span>],
+    <span class="text-blue-400">"tag:container"</span>: [<span class="text-green-400">"tag:server"</span>]
+  },
+  <span class="text-blue-400">"autoApprovers"</span>: {
+    <span class="text-blue-400">"services"</span>: {
+      <span class="text-blue-400">"tag:container"</span>: [<span class="text-green-400">"tag:server"</span>]
+    }
+  }
+}</code></pre>
+          </div>
+
+          <div class="bg-white border border-gray-200 rounded-md p-4 text-sm text-gray-500 mb-6">
+            <span class="font-semibold text-gray-700">Note:</span> If you manage ACLs via GitOps (e.g., <a href="https://github.com/marketplace/actions/sync-tailscale-acls" class="text-gray-900 underline underline-offset-2">tailscale/gitops-acl-action</a>), both tags <strong class="text-gray-700">must</strong> be defined in <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">tagOwners</code> — Tailscale rejects references to undefined tags.
+          </div>
+
+          <p class="text-sm text-gray-500 mb-2 font-semibold text-gray-700">How the tags work:</p>
+          <ul class="text-sm text-gray-500 mb-10 space-y-1 list-disc list-inside">
+            <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">tag:server</code> — assigned to the host machine (or sidecar auth key). Identifies <em>who</em> can advertise services.</li>
+            <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">tag:container</code> — default tag DockTail assigns to services. Identifies <em>what</em> is being advertised.</li>
+          </ul>
+
+          <h2 id="approve-services" class="text-lg font-semibold text-gray-900 mb-3">Approve Services</h2>
+          <p class="text-sm text-gray-500 mb-4">The first time a new service is advertised, it must be manually approved:</p>
+
+          <ol class="text-sm text-gray-500 mb-4 space-y-2 list-decimal list-inside">
+            <li>Go to the <a href="https://login.tailscale.com/admin/services" class="text-gray-900 underline underline-offset-2">Services tab</a></li>
+            <li>Find the newly advertised service</li>
+            <li>Approve it to allow traffic</li>
+          </ol>
+
+          <p class="text-sm text-gray-500">After the initial approval, the service works automatically on subsequent container restarts. With OAuth or API key, service definitions are auto-created, but the first approval may still be required depending on your ACL configuration.</p>
+        </section>
+
+        <!-- Labeling Containers -->
+        <section id="labeling" class="mb-16">
+          <h1 class="text-2xl font-bold text-gray-900 mb-4">Labeling Containers</h1>
+          <p class="text-sm text-gray-500 mb-8">DockTail watches for containers with <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">docktail.*</code> labels and automatically advertises them as Tailscale services. Each labeled container becomes its own independent service.</p>
+
+          <h2 id="direct-ip" class="text-lg font-semibold text-gray-900 mb-3">Direct Container IP Proxying <span class="text-xs font-normal text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded ml-2">Default</span></h2>
+          <p class="text-sm text-gray-500 mb-4">DockTail proxies directly to container IPs on the Docker bridge network. No port publishing required.</p>
+
+          <div class="relative group mb-4">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
+            <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">services</span><span class="text-gray-300">:</span>
+  <span class="text-blue-400">myapp</span><span class="text-gray-300">:</span>
+    <span class="text-blue-400">image</span><span class="text-gray-300">: </span><span class="text-green-400">nginx:latest</span>
+    <span class="text-gray-600"># No ports needed!</span>
+    <span class="text-blue-400">labels</span><span class="text-gray-300">:</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.enable=true"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.name=myapp"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.port=80"</span></code></pre>
+          </div>
+
+          <p class="text-sm text-gray-500 mb-10">Container IPs are automatically detected and updated on restart. Set <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">docktail.service.direct=false</code> to use published port bindings instead.</p>
+
+          <h2 id="service-labels" class="text-lg font-semibold text-gray-900 mb-4">Service Labels</h2>
+
+          <div class="overflow-x-auto mb-4">
+            <table class="w-full text-sm border border-gray-200 rounded-md overflow-hidden">
+              <thead class="bg-gray-100 text-gray-900 text-left">
+                <tr>
+                  <th class="px-4 py-2.5 font-semibold">Label</th>
+                  <th class="px-4 py-2.5 font-semibold">Required</th>
+                  <th class="px-4 py-2.5 font-semibold">Default</th>
+                  <th class="px-4 py-2.5 font-semibold">Description</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white text-gray-600">
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">docktail.service.enable</code></td>
+                  <td class="px-4 py-2.5">Yes</td>
+                  <td class="px-4 py-2.5">-</td>
+                  <td class="px-4 py-2.5">Enable DockTail for container</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">docktail.service.name</code></td>
+                  <td class="px-4 py-2.5">Yes</td>
+                  <td class="px-4 py-2.5">-</td>
+                  <td class="px-4 py-2.5">Service name (e.g., <code class="text-xs">web</code>, <code class="text-xs">api</code>)</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">docktail.service.port</code></td>
+                  <td class="px-4 py-2.5">Yes</td>
+                  <td class="px-4 py-2.5">-</td>
+                  <td class="px-4 py-2.5">Container port to proxy to</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">docktail.service.direct</code></td>
+                  <td class="px-4 py-2.5">No</td>
+                  <td class="px-4 py-2.5"><code class="text-xs">true</code></td>
+                  <td class="px-4 py-2.5">Proxy directly to container IP</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">docktail.service.network</code></td>
+                  <td class="px-4 py-2.5">No</td>
+                  <td class="px-4 py-2.5"><code class="text-xs">bridge</code></td>
+                  <td class="px-4 py-2.5">Docker network for container IP</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">docktail.service.protocol</code></td>
+                  <td class="px-4 py-2.5">No</td>
+                  <td class="px-4 py-2.5">Smart*</td>
+                  <td class="px-4 py-2.5">Container protocol</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">docktail.service.service-port</code></td>
+                  <td class="px-4 py-2.5">No</td>
+                  <td class="px-4 py-2.5">Smart**</td>
+                  <td class="px-4 py-2.5">Port Tailscale listens on</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">docktail.service.service-protocol</code></td>
+                  <td class="px-4 py-2.5">No</td>
+                  <td class="px-4 py-2.5">Smart***</td>
+                  <td class="px-4 py-2.5">Tailscale-facing protocol</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">docktail.tags</code></td>
+                  <td class="px-4 py-2.5">No</td>
+                  <td class="px-4 py-2.5"><code class="text-xs">tag:container</code></td>
+                  <td class="px-4 py-2.5">Comma-separated ACL tags</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="text-sm text-gray-500 mb-10">
+            <p class="font-semibold text-gray-700 mb-1">Smart Defaults:</p>
+            <ul class="space-y-1 list-disc list-inside">
+              <li><strong class="text-gray-600">*</strong> <code class="text-xs">protocol</code>: <code class="text-xs">https</code> if container port is 443, otherwise <code class="text-xs">http</code></li>
+              <li><strong class="text-gray-600">**</strong> <code class="text-xs">service-port</code>: <code class="text-xs">443</code> if service-protocol is <code class="text-xs">https</code>, otherwise <code class="text-xs">80</code></li>
+              <li><strong class="text-gray-600">***</strong> <code class="text-xs">service-protocol</code>: <code class="text-xs">https</code> if service-port is 443, matches protocol for TCP, otherwise <code class="text-xs">http</code></li>
+            </ul>
+          </div>
+
+          <h2 id="funnel-labels" class="text-lg font-semibold text-gray-900 mb-4">Funnel Labels <span class="text-xs font-normal text-gray-500">(Public Internet Access)</span></h2>
+          <p class="text-sm text-gray-500 mb-4">Funnel exposes your service to the public internet. Independent from service labels.</p>
+
+          <div class="overflow-x-auto mb-4">
+            <table class="w-full text-sm border border-gray-200 rounded-md overflow-hidden">
+              <thead class="bg-gray-100 text-gray-900 text-left">
+                <tr>
+                  <th class="px-4 py-2.5 font-semibold">Label</th>
+                  <th class="px-4 py-2.5 font-semibold">Required</th>
+                  <th class="px-4 py-2.5 font-semibold">Default</th>
+                  <th class="px-4 py-2.5 font-semibold">Description</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white text-gray-600">
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">docktail.funnel.enable</code></td>
+                  <td class="px-4 py-2.5">Yes</td>
+                  <td class="px-4 py-2.5"><code class="text-xs">false</code></td>
+                  <td class="px-4 py-2.5">Enable Tailscale Funnel</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">docktail.funnel.port</code></td>
+                  <td class="px-4 py-2.5">Yes</td>
+                  <td class="px-4 py-2.5">-</td>
+                  <td class="px-4 py-2.5">Container port</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">docktail.funnel.funnel-port</code></td>
+                  <td class="px-4 py-2.5">No</td>
+                  <td class="px-4 py-2.5"><code class="text-xs">443</code></td>
+                  <td class="px-4 py-2.5">Public port (443, 8443, or 10000)</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">docktail.funnel.protocol</code></td>
+                  <td class="px-4 py-2.5">No</td>
+                  <td class="px-4 py-2.5"><code class="text-xs">https</code></td>
+                  <td class="px-4 py-2.5">Protocol: https, tcp, tls-terminated-tcp</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="text-sm text-gray-500">
+            <p class="font-semibold text-gray-700 mb-1">Notes:</p>
+            <ul class="space-y-1 list-disc list-inside">
+              <li>Only one funnel per port (Tailscale limitation)</li>
+              <li>Uses machine hostname, not service name: <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">https://&lt;machine&gt;.&lt;tailnet&gt;.ts.net</code></li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- Examples -->
+        <section id="examples" class="mb-16">
+          <h1 class="text-2xl font-bold text-gray-900 mb-8">Examples</h1>
+
+          <h2 id="ex-web" class="text-lg font-semibold text-gray-900 mb-3">Web Application</h2>
+          <div class="relative group mb-10">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
+            <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">services</span><span class="text-gray-300">:</span>
+  <span class="text-blue-400">nginx</span><span class="text-gray-300">:</span>
+    <span class="text-blue-400">image</span><span class="text-gray-300">: </span><span class="text-green-400">nginx:latest</span>
+    <span class="text-gray-600"># No ports needed - DockTail proxies directly to container IP</span>
+    <span class="text-blue-400">labels</span><span class="text-gray-300">:</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.enable=true"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.name=web"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.port=80"</span></code></pre>
+          </div>
+
+          <h2 id="ex-https" class="text-lg font-semibold text-gray-900 mb-3">HTTPS with Auto TLS</h2>
+          <div class="relative group mb-2">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
+            <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">services</span><span class="text-gray-300">:</span>
+  <span class="text-blue-400">api</span><span class="text-gray-300">:</span>
+    <span class="text-blue-400">image</span><span class="text-gray-300">: </span><span class="text-green-400">myapi:latest</span>
+    <span class="text-blue-400">labels</span><span class="text-gray-300">:</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.enable=true"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.name=api"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.port=3000"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.service-port=443"</span>  <span class="text-gray-600"># Auto-enables HTTPS</span></code></pre>
+          </div>
+          <p class="text-sm text-gray-500 mb-10">Access: <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">https://api.your-tailnet.ts.net</code></p>
+
+          <h2 id="ex-tcp" class="text-lg font-semibold text-gray-900 mb-3">Database (TCP)</h2>
+          <div class="relative group mb-10">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
+            <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">services</span><span class="text-gray-300">:</span>
+  <span class="text-blue-400">postgres</span><span class="text-gray-300">:</span>
+    <span class="text-blue-400">image</span><span class="text-gray-300">: </span><span class="text-green-400">postgres:16</span>
+    <span class="text-blue-400">labels</span><span class="text-gray-300">:</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.enable=true"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.name=db"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.port=5432"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.protocol=tcp"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.service-port=5432"</span></code></pre>
+          </div>
+
+          <h2 id="ex-multi" class="text-lg font-semibold text-gray-900 mb-3">Multiple Services from One Container</h2>
+          <p class="text-sm text-gray-500 mb-4">Use numbered labels (<code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">docktail.service.N.*</code>) to expose multiple Tailscale services from a single container. Useful for VPN gateway containers where multiple apps route through one container.</p>
+
+          <div class="relative group mb-2">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
+            <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">services</span><span class="text-gray-300">:</span>
+  <span class="text-blue-400">gluetun</span><span class="text-gray-300">:</span>
+    <span class="text-blue-400">image</span><span class="text-gray-300">: </span><span class="text-green-400">gluetun:latest</span>
+    <span class="text-blue-400">labels</span><span class="text-gray-300">:</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.enable=true"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.name=qbittorrent"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.port=8000"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.1.name=bitmagnet"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.1.port=8001"</span></code></pre>
+          </div>
+          <p class="text-sm text-gray-500 mb-10">Per-index overridable labels: <code class="text-xs">name</code> (required), <code class="text-xs">port</code> (required), <code class="text-xs">service-port</code>, <code class="text-xs">protocol</code>, <code class="text-xs">service-protocol</code>.</p>
+
+          <h2 id="ex-network" class="text-lg font-semibold text-gray-900 mb-3">Custom Docker Network</h2>
+          <div class="relative group mb-10">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
+            <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">services</span><span class="text-gray-300">:</span>
+  <span class="text-blue-400">app</span><span class="text-gray-300">:</span>
+    <span class="text-blue-400">image</span><span class="text-gray-300">: </span><span class="text-green-400">myapp:latest</span>
+    <span class="text-blue-400">networks</span><span class="text-gray-300">:</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">backend</span>
+    <span class="text-blue-400">labels</span><span class="text-gray-300">:</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.enable=true"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.name=app"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.port=3000"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.network=backend"</span>
+
+<span class="text-blue-400">networks</span><span class="text-gray-300">:</span>
+  <span class="text-blue-400">backend</span><span class="text-gray-300">:</span></code></pre>
+          </div>
+
+          <h2 id="ex-legacy" class="text-lg font-semibold text-gray-900 mb-3">Legacy Mode (Published Ports)</h2>
+          <div class="relative group mb-10">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
+            <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">services</span><span class="text-gray-300">:</span>
+  <span class="text-blue-400">app</span><span class="text-gray-300">:</span>
+    <span class="text-blue-400">image</span><span class="text-gray-300">: </span><span class="text-green-400">myapp:latest</span>
+    <span class="text-blue-400">ports</span><span class="text-gray-300">:</span>
+      <span class="text-gray-300">- </span><span class="text-green-400">"8080:3000"</span>  <span class="text-gray-600"># Required when direct=false</span>
+    <span class="text-blue-400">labels</span><span class="text-gray-300">:</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.enable=true"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.name=app"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.port=3000"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.direct=false"</span></code></pre>
+          </div>
+
+          <h2 id="ex-funnel" class="text-lg font-semibold text-gray-900 mb-3">Public Website with Funnel</h2>
+          <div class="relative group mb-2">
+            <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
+            <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">services</span><span class="text-gray-300">:</span>
+  <span class="text-blue-400">website</span><span class="text-gray-300">:</span>
+    <span class="text-blue-400">image</span><span class="text-gray-300">: </span><span class="text-green-400">nginx:latest</span>
+    <span class="text-blue-400">labels</span><span class="text-gray-300">:</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.enable=true"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.name=website"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.port=80"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.service-port=443"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.funnel.enable=true"</span>
+      <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.funnel.port=80"</span></code></pre>
+          </div>
+          <div class="text-sm text-gray-500">
+            <p>Access:</p>
+            <ul class="list-disc list-inside mt-1">
+              <li>Tailnet: <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">https://website.your-tailnet.ts.net</code></li>
+              <li>Public: <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">https://your-machine.your-tailnet.ts.net</code></li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- Reference -->
+        <section id="reference" class="mb-16">
+          <h1 class="text-2xl font-bold text-gray-900 mb-8">Reference</h1>
+
+          <h2 id="env-vars" class="text-lg font-semibold text-gray-900 mb-4">Environment Variables</h2>
+
+          <div class="overflow-x-auto mb-4">
+            <table class="w-full text-sm border border-gray-200 rounded-md overflow-hidden">
+              <thead class="bg-gray-100 text-gray-900 text-left">
+                <tr>
+                  <th class="px-4 py-2.5 font-semibold">Variable</th>
+                  <th class="px-4 py-2.5 font-semibold">Default</th>
+                  <th class="px-4 py-2.5 font-semibold">Description</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white text-gray-600">
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">TAILSCALE_OAUTH_CLIENT_ID</code></td>
+                  <td class="px-4 py-2.5">-</td>
+                  <td class="px-4 py-2.5">OAuth Client ID (enables auto-service-creation)</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">TAILSCALE_OAUTH_CLIENT_SECRET</code></td>
+                  <td class="px-4 py-2.5">-</td>
+                  <td class="px-4 py-2.5">OAuth Client Secret</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">TAILSCALE_API_KEY</code></td>
+                  <td class="px-4 py-2.5">-</td>
+                  <td class="px-4 py-2.5">API Key (alternative to OAuth, expires 90 days)</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">TAILSCALE_TAILNET</code></td>
+                  <td class="px-4 py-2.5"><code class="text-xs">-</code></td>
+                  <td class="px-4 py-2.5">Tailnet ID (defaults to key's tailnet)</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">DEFAULT_SERVICE_TAGS</code></td>
+                  <td class="px-4 py-2.5"><code class="text-xs">tag:container</code></td>
+                  <td class="px-4 py-2.5">Default tags for services</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">LOG_LEVEL</code></td>
+                  <td class="px-4 py-2.5"><code class="text-xs">info</code></td>
+                  <td class="px-4 py-2.5">Logging level (debug, info, warn, error)</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">RECONCILE_INTERVAL</code></td>
+                  <td class="px-4 py-2.5"><code class="text-xs">60s</code></td>
+                  <td class="px-4 py-2.5">State reconciliation interval</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">DOCKER_HOST</code></td>
+                  <td class="px-4 py-2.5"><code class="text-xs">unix:///var/run/docker.sock</code></td>
+                  <td class="px-4 py-2.5">Docker daemon socket</td>
+                </tr>
+                <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">TAILSCALE_SOCKET</code></td>
+                  <td class="px-4 py-2.5"><code class="text-xs">/var/run/tailscale/tailscaled.sock</code></td>
+                  <td class="px-4 py-2.5">Tailscale daemon socket</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="text-sm text-gray-500 mb-10">If both OAuth and API key are set, OAuth takes precedence.</p>
+
+          <h2 id="protocols" class="text-lg font-semibold text-gray-900 mb-4">Supported Protocols</h2>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white border border-gray-200 rounded-md p-4">
+              <p class="text-sm font-semibold text-gray-700 mb-3">Tailscale-facing (service-protocol)</p>
+              <ul class="text-sm text-gray-500 space-y-1.5">
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">http</code> — Layer 7 HTTP</li>
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">https</code> — Layer 7 HTTPS (auto TLS)</li>
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">tcp</code> — Layer 4 TCP</li>
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">tls-terminated-tcp</code> — Layer 4 with TLS termination</li>
+              </ul>
+            </div>
+            <div class="bg-white border border-gray-200 rounded-md p-4">
+              <p class="text-sm font-semibold text-gray-700 mb-3">Container-facing (protocol)</p>
+              <ul class="text-sm text-gray-500 space-y-1.5">
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">http</code> — HTTP backend</li>
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">https</code> — HTTPS with valid certificate</li>
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">https+insecure</code> — HTTPS with self-signed certificate</li>
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">tcp</code> — TCP backend</li>
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">tls-terminated-tcp</code> — TCP with TLS termination</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- How It Works -->
+        <section id="how-it-works" class="mb-16">
+          <h1 class="text-2xl font-bold text-gray-900 mb-6">How It Works</h1>
+
+          <div class="relative group mb-6">
+            <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code> ┌────────────────────────────────────────────────────────┐
+ │                     Docker Host                        │
+ │                                                        │
+ │  ┌──────────────────┐         ┌──────────────────┐     │
+ │  │     DockTail     │────────▶│ Tailscale Daemon │     │
+ │  │   (Container)    │  CLI    │   (Host Process) │     │
+ │  └────────┬─────────┘         └────────┬─────────┘     │
+ │           │                            │               │
+ │           │ Docker Socket              │ Proxies to    │
+ │           │ Monitoring                 │ container IP  │
+ │           ▼                            ▼               │
+ │  ┌──────────────────┐         ┌──────────────────┐     │
+ │  │   App Container  │◀────────│  172.17.0.3:80   │     │
+ │  │   Port 80        │         │  (bridge network)│     │
+ │  │  No ports needed │         │                  │     │
+ │  └──────────────────┘         └──────────────────┘     │
+ │                                                        │
+ └────────────────────────────────────────────────────────┘
+                          │
+                          │ Tailscale Network
+                          ▼
+               ┌─────────────────────┐
+               │  Tailnet Clients    │
+               │  Access services:   │
+               │  web.tailnet.ts.net │
+               └─────────────────────┘</code></pre>
+          </div>
+
+          <ol class="text-sm text-gray-500 space-y-2 list-decimal list-inside mb-6">
+            <li><span class="text-gray-700 font-semibold">Container Discovery</span> — Monitors Docker events for container start/stop</li>
+            <li><span class="text-gray-700 font-semibold">Label Parsing</span> — Extracts service configuration from container labels</li>
+            <li><span class="text-gray-700 font-semibold">IP Detection</span> — Gets container IP from Docker network settings (default: bridge)</li>
+            <li><span class="text-gray-700 font-semibold">Config Generation</span> — Creates Tailscale service config proxying to container IP</li>
+            <li><span class="text-gray-700 font-semibold">Service Advertisement</span> — Executes Tailscale CLI to advertise services</li>
+            <li><span class="text-gray-700 font-semibold">Control Plane Sync</span> — If OAuth/API key configured, creates service definitions via API</li>
+            <li><span class="text-gray-700 font-semibold">Reconciliation</span> — Periodically syncs state; auto-updates when container IPs change</li>
+          </ol>
+
+          <div class="text-sm text-gray-500">
+            <p class="font-semibold text-gray-700 mb-1">Notes:</p>
+            <ul class="space-y-1 list-disc list-inside">
+              <li>DockTail does NOT delete service definitions from the API when containers stop (conservative deletion strategy)</li>
+              <li>Container IP changes on restart are handled automatically during reconciliation</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- Footer-like bottom spacing -->
+        <div class="border-t border-gray-200 pt-8 pb-16">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span class="text-xs text-gray-400">docktail</span>
+            <div class="flex items-center gap-6">
+              <a href="https://github.com/marvinvr/docktail" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">GitHub</a>
+              <a href="https://tailscale.com/kb/1552/tailscale-services" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">Tailscale Services</a>
+              <a href="https://marvinvr.ch" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">marvinvr</a>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Mobile sidebar overlay -->
+  <div id="sidebar-overlay" class="hidden fixed inset-0 z-40 bg-black/20 lg:hidden" onclick="closeSidebar()"></div>
+  <div id="sidebar-mobile" class="hidden fixed top-14 left-0 z-40 w-64 bg-white border-r border-gray-200 h-[calc(100vh-3.5rem)] overflow-y-auto py-6 px-2 lg:hidden">
+  </div>
+
+  <script>
+    // Copy button
+    function copyCode(btn) {
+      const pre = btn.parentElement.querySelector('pre');
+      const code = pre.querySelector('code') || pre;
+      navigator.clipboard.writeText(code.textContent).then(() => {
+        btn.textContent = 'copied!';
+        setTimeout(() => btn.textContent = 'copy', 2000);
+      });
+    }
+
+    // Scroll spy
+    const links = document.querySelectorAll('.sidebar-link');
+    const sections = [];
+    links.forEach(link => {
+      const id = link.getAttribute('href')?.slice(1);
+      const el = id && document.getElementById(id);
+      if (el) sections.push({ id, el });
+    });
+
+    function updateActive() {
+      let current = sections[0]?.id;
+      for (const s of sections) {
+        if (s.el.getBoundingClientRect().top <= 100) current = s.id;
+      }
+      links.forEach(link => {
+        link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+      });
+    }
+    window.addEventListener('scroll', updateActive, { passive: true });
+    updateActive();
+
+    // Mobile sidebar
+    const toggle = document.getElementById('sidebar-toggle');
+    const overlay = document.getElementById('sidebar-overlay');
+    const mobileSidebar = document.getElementById('sidebar-mobile');
+    const desktopNav = document.querySelector('#sidebar nav');
+
+    // Clone nav into mobile sidebar
+    if (desktopNav && mobileSidebar) {
+      mobileSidebar.appendChild(desktopNav.cloneNode(true));
+      mobileSidebar.querySelectorAll('.sidebar-link').forEach(link => {
+        link.addEventListener('click', closeSidebar);
+      });
+    }
+
+    toggle?.addEventListener('click', () => {
+      overlay.classList.toggle('hidden');
+      mobileSidebar.classList.toggle('hidden');
+    });
+
+    function closeSidebar() {
+      overlay.classList.add('hidden');
+      mobileSidebar.classList.add('hidden');
+    }
+  </script>
+
+</body>
+</html>
