@@ -106,6 +106,20 @@ func isManagedService(serviceName string) bool {
 	return strings.HasPrefix(serviceName, "svc:")
 }
 
+func normalizeServiceName(serviceName string) string {
+	normalized := strings.ToLower(strings.TrimSpace(serviceName))
+	return strings.TrimPrefix(normalized, "svc:")
+}
+
+func (c *Client) shouldIgnoreService(serviceName string) bool {
+	if len(c.ignoredServices) == 0 {
+		return false
+	}
+
+	_, ok := c.ignoredServices[normalizeServiceName(serviceName)]
+	return ok
+}
+
 // buildDestination constructs the destination URL for a service
 func buildDestination(svc *apptypes.ContainerService) string {
 	// Use the service protocol directly in the destination URL
