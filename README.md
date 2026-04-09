@@ -309,6 +309,8 @@ services:
 
 Access: `https://api.your-tailnet.ts.net`
 
+> **Note:** If switching an existing service from http to https, you must first delete it from the Tailscale advertised service panel.
+
 ### Database (TCP)
 
 ```yaml
