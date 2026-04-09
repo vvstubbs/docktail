@@ -513,7 +513,10 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
       <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.port=3000"</span>
       <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.service-port=443"</span>  <span class="text-gray-600"># Auto-enables HTTPS</span></code></pre>
           </div>
-          <p class="text-sm text-gray-500 mb-10">Access: <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">https://api.your-tailnet.ts.net</code></p>
+          <p class="text-sm text-gray-500 mb-3">Access: <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">https://api.your-tailnet.ts.net</code></p>
+          <p class="text-sm text-gray-500 mb-10">
+            <span class="font-semibold text-gray-700">Note:</span> If switching an existing service from http to https, you must first delete it from the Tailscale advertised service panel.
+          </p>
 
           <h2 id="ex-tcp" class="text-lg font-semibold text-gray-900 mb-3">Database (TCP)</h2>
           <div class="relative group mb-10">
