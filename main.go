@@ -60,6 +60,8 @@ func main() {
 		apiSyncMethod = "api_key"
 	}
 
+	logCredentialWarnings(tailscaleAPIKey, tailscaleOAuthClientID, tailscaleOAuthClientSecret)
+
 	log.Info().
 		Dur("reconcile_interval", reconcileInterval).
 		Str("tailscale_socket", tailscaleSocket).
@@ -180,4 +182,35 @@ func getEnvDuration(key string, defaultValue time.Duration) time.Duration {
 			Msg("Failed to parse duration, using default")
 	}
 	return defaultValue
+}
+
+func logCredentialWarnings(tailscaleAPIKey, tailscaleOAuthClientID, tailscaleOAuthClientSecret string) {
+	if tailscaleOAuthClientID == "" && tailscaleOAuthClientSecret == "" {
+		if tailscaleAPIKey == "" {
+			log.Warn().
+				Strs("missing", []string{"TAILSCALE_OAUTH_CLIENT_ID", "TAILSCALE_OAUTH_CLIENT_SECRET"}).
+				Msg("Tailscale OAuth credentials are not configured; DockTail will still run, but auto-service creation is disabled")
+		}
+		return
+	}
+
+	if tailscaleOAuthClientID == "" || tailscaleOAuthClientSecret == "" {
+		missing := make([]string, 0, 2)
+		if tailscaleOAuthClientID == "" {
+			missing = append(missing, "TAILSCALE_OAUTH_CLIENT_ID")
+		}
+		if tailscaleOAuthClientSecret == "" {
+			missing = append(missing, "TAILSCALE_OAUTH_CLIENT_SECRET")
+		}
+
+		event := log.Warn().
+			Strs("missing", missing)
+		if tailscaleAPIKey != "" {
+			event = event.Str("fallback", "api_key")
+		} else {
+			event = event.Str("fallback", "manual_mode")
+		}
+
+		event.Msg("Incomplete Tailscale OAuth configuration; both OAuth environment variables must be set to enable OAuth-based auto-service creation")
+	}
 }
