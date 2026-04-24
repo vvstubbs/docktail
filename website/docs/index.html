@@ -17,7 +17,58 @@
   <meta name="author" content="marvinvr">
   <meta name="keywords" content="docker, tailscale, containers, service mesh, tailnet, networking, devops, documentation">
   <link rel="canonical" href="https://docktail.org/docs/">
+  <link rel="sitemap" type="application/xml" href="/sitemap.xml">
+  <link rel="alternate" type="text/markdown" href="/docs.md" title="DockTail documentation in Markdown">
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="DockTail guide for agents">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍸</text></svg>">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "TechArticle",
+          "headline": "DockTail Documentation",
+          "description": "Documentation for DockTail, a tool that automatically exposes Docker containers as Tailscale Services using label-based configuration.",
+          "url": "https://docktail.org/docs/",
+          "image": "https://docktail.org/assets/og-image.jpeg",
+          "author": {
+            "@type": "Person",
+            "name": "marvinvr",
+            "url": "https://marvinvr.ch"
+          },
+          "about": [
+            "Docker",
+            "Tailscale",
+            "Tailscale Services",
+            "Container networking"
+          ],
+          "isPartOf": {
+            "@type": "WebSite",
+            "name": "DockTail",
+            "url": "https://docktail.org/"
+          },
+          "mainEntityOfPage": "https://docktail.org/docs/"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "DockTail",
+              "item": "https://docktail.org/"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Docs",
+              "item": "https://docktail.org/docs/"
+            }
+          ]
+        }
+      ]
+    }
+  </script>
   <script
     src="https://rybbit.marvinvr.ch/api/script.js"
     data-site-id="ef0b4c42a7c2"
@@ -41,8 +92,8 @@
       </div>
       <div class="flex items-center gap-4">
         <!-- Mobile menu toggle -->
-        <button id="sidebar-toggle" class="lg:hidden text-gray-500 hover:text-gray-900 transition-colors">
-          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        <button id="sidebar-toggle" class="lg:hidden text-gray-500 hover:text-gray-900 transition-colors" aria-label="Open documentation navigation">
+          <svg class="w-5 h-5" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
         <a href="https://github.com/marvinvr/docktail" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">github</a>
       </div>
@@ -55,7 +106,7 @@
       <!-- Sidebar -->
       <aside id="sidebar" class="hidden lg:block w-64 flex-shrink-0">
         <div class="sticky top-14 overflow-y-auto h-[calc(100vh-3.5rem)] py-8 pr-4">
-          <nav class="space-y-1 text-sm">
+          <nav class="space-y-1 text-sm" aria-label="Documentation navigation">
             <a href="#quick-start" class="sidebar-link block px-3 py-1.5 rounded text-gray-500 hover:text-gray-900 transition-colors font-semibold">Quick Start</a>
 
             <div class="pt-3">
@@ -110,10 +161,11 @@
 
       <!-- Content -->
       <main class="flex-1 min-w-0 py-8 lg:py-12 max-w-3xl">
+        <h1 class="sr-only">DockTail Documentation</h1>
 
         <!-- Quick Start -->
         <section id="quick-start" class="mb-16">
-          <h1 class="text-2xl font-bold text-gray-900 mb-4">Quick Start</h1>
+          <h2 class="text-2xl font-bold text-gray-900 mb-4">Quick Start</h2>
           <p class="text-sm text-gray-500 mb-6">Get DockTail running in under a minute. Add it to your Docker Compose file alongside your services.</p>
 
           <div class="relative group mb-4">
@@ -150,9 +202,9 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
 
         <!-- Installation -->
         <section id="installation" class="mb-16">
-          <h1 class="text-2xl font-bold text-gray-900 mb-8">Installation</h1>
+          <h2 class="text-2xl font-bold text-gray-900 mb-8">Installation</h2>
 
-          <h2 id="tailscale-on-host" class="text-lg font-semibold text-gray-900 mb-3">Tailscale on Host</h2>
+          <h3 id="tailscale-on-host" class="text-lg font-semibold text-gray-900 mb-3">Tailscale on Host</h3>
           <p class="text-sm text-gray-500 mb-4">For systems with Tailscale already installed on the host:</p>
 
           <div class="relative group mb-4">
@@ -185,7 +237,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
             <span class="font-semibold">Warning:</span> The <code class="bg-amber-100 px-1.5 py-0.5 rounded text-xs">--reset</code> flag briefly drops the Tailscale connection. If connected via SSH over Tailscale, your session will be interrupted momentarily.
           </div>
 
-          <h2 id="tailscale-sidecar" class="text-lg font-semibold text-gray-900 mb-3">Tailscale Sidecar</h2>
+          <h3 id="tailscale-sidecar" class="text-lg font-semibold text-gray-900 mb-3">Tailscale Sidecar</h3>
           <p class="text-sm text-gray-500 mb-4">For systems without Tailscale on the host — runs Tailscale as a container:</p>
 
           <div class="relative group mb-4">
@@ -232,10 +284,10 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
 
         <!-- Configuration -->
         <section id="configuration" class="mb-16">
-          <h1 class="text-2xl font-bold text-gray-900 mb-4">Configuration</h1>
+          <h2 class="text-2xl font-bold text-gray-900 mb-4">Configuration</h2>
           <p class="text-sm text-gray-500 mb-8">DockTail works in three modes. Choose based on your needs.</p>
 
-          <h2 id="oauth" class="text-lg font-semibold text-gray-900 mb-3">OAuth Credentials <span class="text-xs font-normal text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded ml-2">Recommended</span></h2>
+          <h3 id="oauth" class="text-lg font-semibold text-gray-900 mb-3">OAuth Credentials <span class="text-xs font-normal text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded ml-2">Recommended</span></h3>
           <p class="text-sm text-gray-500 mb-4">OAuth lets DockTail auto-create services in your Tailscale Admin Console. No manual setup required.</p>
 
           <ol class="text-sm text-gray-500 mb-4 space-y-2 list-decimal pl-5">
@@ -261,7 +313,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
             <span class="text-gray-700 font-semibold">Benefits:</span> Services auto-created when containers start. Never expires (unlike API keys). Proper tag-based ACL support.
           </div>
 
-          <h2 id="api-key" class="text-lg font-semibold text-gray-900 mb-3">API Key</h2>
+          <h3 id="api-key" class="text-lg font-semibold text-gray-900 mb-3">API Key</h3>
           <p class="text-sm text-gray-500 mb-4">Also auto-creates services, but expires every 90 days.</p>
 
           <ol class="text-sm text-gray-500 mb-4 space-y-2 list-decimal pl-5">
@@ -276,7 +328,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
   <span class="text-gray-300">- </span><span class="text-green-400">TAILSCALE_API_KEY=tskey-api-...</span></code></pre>
           </div>
 
-          <h2 id="manual-mode" class="text-lg font-semibold text-gray-900 mb-3">No Credentials (Manual Mode)</h2>
+          <h3 id="manual-mode" class="text-lg font-semibold text-gray-900 mb-3">No Credentials (Manual Mode)</h3>
           <p class="text-sm text-gray-500 mb-4">DockTail works without any credentials for basic use. Services are advertised locally via the Tailscale CLI, but you must manually create service definitions in the Admin Console.</p>
 
           <ol class="text-sm text-gray-500 space-y-2 list-decimal pl-5">
@@ -288,10 +340,10 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
 
         <!-- Admin Setup -->
         <section id="admin-setup" class="mb-16">
-          <h1 class="text-2xl font-bold text-gray-900 mb-4">Admin Setup</h1>
+          <h2 class="text-2xl font-bold text-gray-900 mb-4">Admin Setup</h2>
           <p class="text-sm text-gray-500 mb-8">After deploying DockTail, configure your <a href="https://login.tailscale.com/admin" class="text-gray-900 underline underline-offset-2">Tailscale Admin Console</a> for services to work.</p>
 
-          <h2 id="acl-configuration" class="text-lg font-semibold text-gray-900 mb-3">ACL Configuration</h2>
+          <h3 id="acl-configuration" class="text-lg font-semibold text-gray-900 mb-3">ACL Configuration</h3>
           <p class="text-sm text-gray-500 mb-4">Services require <strong class="text-gray-700">tag definitions</strong> in <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">tagOwners</code> and <strong class="text-gray-700">auto-approvers</strong> to allow the host to advertise them. Go to <a href="https://login.tailscale.com/admin/acls" class="text-gray-900 underline underline-offset-2">Access Controls</a> and add both blocks:</p>
 
           <div class="relative group mb-4">
@@ -319,7 +371,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
             <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">tag:container</code> — default tag DockTail assigns to services. Identifies <em>what</em> is being advertised.</li>
           </ul>
 
-          <h2 id="approve-services" class="text-lg font-semibold text-gray-900 mb-3">Approve Services</h2>
+          <h3 id="approve-services" class="text-lg font-semibold text-gray-900 mb-3">Approve Services</h3>
           <p class="text-sm text-gray-500 mb-4">The first time a new service is advertised, it must be manually approved:</p>
 
           <ol class="text-sm text-gray-500 mb-4 space-y-2 list-decimal pl-5">
@@ -333,10 +385,10 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
 
         <!-- Labeling Containers -->
         <section id="labeling" class="mb-16">
-          <h1 class="text-2xl font-bold text-gray-900 mb-4">Labeling Containers</h1>
+          <h2 class="text-2xl font-bold text-gray-900 mb-4">Labeling Containers</h2>
           <p class="text-sm text-gray-500 mb-8">DockTail watches for containers with <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">docktail.*</code> labels and automatically advertises them as Tailscale services. Each labeled container becomes its own independent service.</p>
 
-          <h2 id="direct-ip" class="text-lg font-semibold text-gray-900 mb-3">Direct Container IP Proxying <span class="text-xs font-normal text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded ml-2">Default</span></h2>
+          <h3 id="direct-ip" class="text-lg font-semibold text-gray-900 mb-3">Direct Container IP Proxying <span class="text-xs font-normal text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded ml-2">Default</span></h3>
           <p class="text-sm text-gray-500 mb-4">DockTail proxies directly to container IPs on the Docker bridge network. No port publishing required.</p>
 
           <div class="relative group mb-4">
@@ -353,7 +405,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
 
           <p class="text-sm text-gray-500 mb-10">Container IPs are automatically detected and updated on restart. Set <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">docktail.service.direct=false</code> to use published port bindings instead.</p>
 
-          <h2 id="service-labels" class="text-lg font-semibold text-gray-900 mb-4">Service Labels</h2>
+          <h3 id="service-labels" class="text-lg font-semibold text-gray-900 mb-4">Service Labels</h3>
 
           <div class="overflow-x-auto mb-4">
             <table class="w-full min-w-[600px] text-sm border border-gray-200 rounded-md overflow-hidden">
@@ -433,7 +485,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
             </ul>
           </div>
 
-          <h2 id="funnel-labels" class="text-lg font-semibold text-gray-900 mb-4">Funnel Labels <span class="text-xs font-normal text-gray-500">(Public Internet Access)</span></h2>
+          <h3 id="funnel-labels" class="text-lg font-semibold text-gray-900 mb-4">Funnel Labels <span class="text-xs font-normal text-gray-500">(Public Internet Access)</span></h3>
           <p class="text-sm text-gray-500 mb-4">Funnel exposes your service to the public internet. Independent from service labels.</p>
 
           <div class="overflow-x-auto mb-4">
@@ -486,9 +538,9 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
 
         <!-- Examples -->
         <section id="examples" class="mb-16">
-          <h1 class="text-2xl font-bold text-gray-900 mb-8">Examples</h1>
+          <h2 class="text-2xl font-bold text-gray-900 mb-8">Examples</h2>
 
-          <h2 id="ex-web" class="text-lg font-semibold text-gray-900 mb-3">Web Application</h2>
+          <h3 id="ex-web" class="text-lg font-semibold text-gray-900 mb-3">Web Application</h3>
           <div class="relative group mb-10">
             <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
             <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">services</span><span class="text-gray-300">:</span>
@@ -501,7 +553,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
       <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.port=80"</span></code></pre>
           </div>
 
-          <h2 id="ex-https" class="text-lg font-semibold text-gray-900 mb-3">HTTPS with Auto TLS</h2>
+          <h3 id="ex-https" class="text-lg font-semibold text-gray-900 mb-3">HTTPS with Auto TLS</h3>
           <div class="relative group mb-2">
             <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
             <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">services</span><span class="text-gray-300">:</span>
@@ -518,7 +570,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
             <span class="font-semibold text-gray-700">Note:</span> If switching an existing service from http to https, you must first delete it from the Tailscale advertised service panel.
           </p>
 
-          <h2 id="ex-tcp" class="text-lg font-semibold text-gray-900 mb-3">Database (TCP)</h2>
+          <h3 id="ex-tcp" class="text-lg font-semibold text-gray-900 mb-3">Database (TCP)</h3>
           <div class="relative group mb-10">
             <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
             <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">services</span><span class="text-gray-300">:</span>
@@ -532,7 +584,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
       <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.service-port=5432"</span></code></pre>
           </div>
 
-          <h2 id="ex-multi" class="text-lg font-semibold text-gray-900 mb-3">Multiple Services from One Container</h2>
+          <h3 id="ex-multi" class="text-lg font-semibold text-gray-900 mb-3">Multiple Services from One Container</h3>
           <p class="text-sm text-gray-500 mb-4">Use numbered labels (<code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">docktail.service.N.*</code>) to expose multiple Tailscale services from a single container. Useful for VPN gateway containers where multiple apps route through one container.</p>
 
           <div class="relative group mb-2">
@@ -549,7 +601,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
           </div>
           <p class="text-sm text-gray-500 mb-10">Per-index overridable labels: <code class="text-xs">name</code> (required), <code class="text-xs">port</code> (required), <code class="text-xs">service-port</code>, <code class="text-xs">protocol</code>, <code class="text-xs">service-protocol</code>.</p>
 
-          <h2 id="ex-network" class="text-lg font-semibold text-gray-900 mb-3">Custom Docker Network</h2>
+          <h3 id="ex-network" class="text-lg font-semibold text-gray-900 mb-3">Custom Docker Network</h3>
           <div class="relative group mb-10">
             <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
             <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">services</span><span class="text-gray-300">:</span>
@@ -567,7 +619,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
   <span class="text-blue-400">backend</span><span class="text-gray-300">:</span></code></pre>
           </div>
 
-          <h2 id="ex-legacy" class="text-lg font-semibold text-gray-900 mb-3">Legacy Mode (Published Ports)</h2>
+          <h3 id="ex-legacy" class="text-lg font-semibold text-gray-900 mb-3">Legacy Mode (Published Ports)</h3>
           <div class="relative group mb-10">
             <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
             <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">services</span><span class="text-gray-300">:</span>
@@ -582,7 +634,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
       <span class="text-gray-300">- </span><span class="text-amber-400">"docktail.service.direct=false"</span></code></pre>
           </div>
 
-          <h2 id="ex-funnel" class="text-lg font-semibold text-gray-900 mb-3">Public Website with Funnel</h2>
+          <h3 id="ex-funnel" class="text-lg font-semibold text-gray-900 mb-3">Public Website with Funnel</h3>
           <div class="relative group mb-2">
             <button onclick="copyCode(this)" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer">copy</button>
             <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code><span class="text-blue-400">services</span><span class="text-gray-300">:</span>
@@ -607,9 +659,9 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
 
         <!-- Reference -->
         <section id="reference" class="mb-16">
-          <h1 class="text-2xl font-bold text-gray-900 mb-8">Reference</h1>
+          <h2 class="text-2xl font-bold text-gray-900 mb-8">Reference</h2>
 
-          <h2 id="env-vars" class="text-lg font-semibold text-gray-900 mb-4">Environment Variables</h2>
+          <h3 id="env-vars" class="text-lg font-semibold text-gray-900 mb-4">Environment Variables</h3>
 
           <div class="overflow-x-auto mb-4">
             <table class="w-full min-w-[600px] text-sm border border-gray-200 rounded-md overflow-hidden">
@@ -647,6 +699,11 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
                   <td class="px-4 py-2.5">Default tags for services</td>
                 </tr>
                 <tr class="border-t border-gray-200">
+                  <td class="px-4 py-2.5"><code class="text-xs text-gray-700">IGNORE_SERVICE_NAMES</code></td>
+                  <td class="px-4 py-2.5">-</td>
+                  <td class="px-4 py-2.5">Comma-separated service names DockTail must not clear during reconciliation or shutdown cleanup</td>
+                </tr>
+                <tr class="border-t border-gray-200">
                   <td class="px-4 py-2.5"><code class="text-xs text-gray-700">LOG_LEVEL</code></td>
                   <td class="px-4 py-2.5"><code class="text-xs">info</code></td>
                   <td class="px-4 py-2.5">Logging level (debug, info, warn, error)</td>
@@ -670,9 +727,10 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
             </table>
           </div>
 
-          <p class="text-sm text-gray-500 mb-10">If both OAuth and API key are set, OAuth takes precedence.</p>
+          <p class="text-sm text-gray-500 mb-3">If both OAuth and API key are set, OAuth takes precedence.</p>
+          <p class="text-sm text-gray-500 mb-10"><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">IGNORE_SERVICE_NAMES</code> accepts bare names like <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">grafana</code> or fully qualified names like <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">svc:grafana</code>.</p>
 
-          <h2 id="protocols" class="text-lg font-semibold text-gray-900 mb-4">Supported Protocols</h2>
+          <h3 id="protocols" class="text-lg font-semibold text-gray-900 mb-4">Supported Protocols</h3>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="bg-white border border-gray-200 rounded-md p-4">
@@ -699,7 +757,7 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
 
         <!-- How It Works -->
         <section id="how-it-works" class="mb-16">
-          <h1 class="text-2xl font-bold text-gray-900 mb-6">How It Works</h1>
+          <h2 class="text-2xl font-bold text-gray-900 mb-6">How It Works</h2>
 
           <div class="relative group mb-6">
             <pre class="bg-gray-900 text-gray-100 rounded-md p-4 text-sm overflow-x-auto"><code> ┌────────────────────────────────────────────────────────┐
@@ -756,6 +814,8 @@ curl http://myapp.your-tailnet.ts.net</code></pre>
             <div class="flex items-center gap-6">
               <a href="https://github.com/marvinvr/docktail" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">GitHub</a>
               <a href="https://tailscale.com/kb/1552/tailscale-services" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">Tailscale Services</a>
+              <a href="/docs.md" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">Markdown</a>
+              <a href="/llms.txt" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">Agents</a>
               <a href="https://marvinvr.ch" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">marvinvr</a>
             </div>
           </div>
