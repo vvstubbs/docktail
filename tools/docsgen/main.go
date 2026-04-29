@@ -25,11 +25,30 @@ type heading struct {
 	ID    string
 }
 
+type sidebarItem struct {
+	Text string
+	ID   string
+}
+
+type sidebarSection struct {
+	Text     string
+	ID       string
+	Children []sidebarItem
+}
+
+type fileSpec struct {
+	Path     string
+	IsIntro  bool
+	H1ID     string
+	Headings []heading
+}
+
 type pageData struct {
 	Title       string
 	Description string
 	Body        template.HTML
 	Headings    []heading
+	Sections    []sidebarSection
 	GeneratedAt string
 }
 
@@ -48,6 +67,11 @@ func main() {
 		fatal(err)
 	}
 
+	specs, err := readFileSpecs(*sourceDir)
+	if err != nil {
+		fatal(err)
+	}
+
 	title := "DockTail Documentation"
 	if len(headings) > 0 && headings[0].Level == 1 {
 		title = headings[0].Text
@@ -59,6 +83,7 @@ func main() {
 		Description: "Documentation for DockTail, a tool that automatically exposes Docker containers as Tailscale Services using label-based configuration.",
 		Body:        template.HTML(rendered),
 		Headings:    headings,
+		Sections:    buildSidebar(specs),
 		GeneratedAt: generatedAt,
 	}
 
@@ -149,6 +174,88 @@ func collectHeadings(doc ast.Node, source []byte) []heading {
 		return ast.WalkContinue, nil
 	})
 	return headings
+}
+
+func buildSidebar(specs []fileSpec) []sidebarSection {
+	var sections []sidebarSection
+	for _, spec := range specs {
+		if spec.IsIntro {
+			sec := sidebarSection{Text: "Overview", ID: spec.H1ID}
+			for _, h := range spec.Headings {
+				if h.ID == "" || h.Level != 2 {
+					continue
+				}
+				sec.Children = append(sec.Children, sidebarItem{Text: h.Text, ID: h.ID})
+			}
+			sections = append(sections, sec)
+			continue
+		}
+		var current *sidebarSection
+		for _, h := range spec.Headings {
+			if h.ID == "" {
+				continue
+			}
+			switch h.Level {
+			case 2:
+				sections = append(sections, sidebarSection{Text: h.Text, ID: h.ID})
+				current = &sections[len(sections)-1]
+			case 3:
+				if current == nil {
+					continue
+				}
+				current.Children = append(current.Children, sidebarItem{Text: h.Text, ID: h.ID})
+			}
+		}
+	}
+	return sections
+}
+
+func readFileSpecs(sourceDir string) ([]fileSpec, error) {
+	matches, err := filepath.Glob(filepath.Join(sourceDir, "*.md"))
+	if err != nil {
+		return nil, err
+	}
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("no markdown files found in %s", sourceDir)
+	}
+	sort.Strings(matches)
+
+	specs := make([]fileSpec, 0, len(matches))
+	for _, path := range matches {
+		body, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		hs, err := parseHeadings(bytes.TrimSpace(body))
+		if err != nil {
+			return nil, err
+		}
+		spec := fileSpec{Path: path}
+		for _, h := range hs {
+			if h.Level == 1 && !spec.IsIntro {
+				spec.IsIntro = true
+				spec.H1ID = h.ID
+				continue
+			}
+			spec.Headings = append(spec.Headings, h)
+		}
+		specs = append(specs, spec)
+	}
+	return specs, nil
+}
+
+func parseHeadings(source []byte) ([]heading, error) {
+	md := goldmark.New(
+		goldmark.WithExtensions(
+			extension.Table,
+			extension.Strikethrough,
+			extension.TaskList,
+		),
+		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
+	)
+	reader := text.NewReader(source)
+	doc := md.Parser().Parse(reader)
+	return collectHeadings(doc, source), nil
 }
 
 func headingText(node ast.Node, source []byte) string {
@@ -279,15 +386,15 @@ var docsTemplate = template.Must(template.New("docs").Parse(`<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Docs - DockTail</title>
+  <title>Docs — DockTail</title>
   <meta name="description" content="{{ .Description }}">
-  <meta property="og:title" content="Docs - DockTail">
+  <meta property="og:title" content="Docs — DockTail">
   <meta property="og:description" content="{{ .Description }}">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://docktail.org/docs/">
   <meta property="og:image" content="https://docktail.org/assets/og-image.jpeg">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Docs - DockTail">
+  <meta name="twitter:title" content="Docs — DockTail">
   <meta name="twitter:description" content="{{ .Description }}">
   <meta name="twitter:image" content="https://docktail.org/assets/og-image.jpeg">
   <meta name="author" content="marvinvr">
@@ -297,7 +404,7 @@ var docsTemplate = template.Must(template.New("docs").Parse(`<!DOCTYPE html>
   <link rel="alternate" type="text/markdown" href="/docs.md" title="DockTail documentation in Markdown">
   <link rel="alternate" type="text/plain" href="/llms.txt" title="DockTail guide for agents">
   <link rel="alternate" type="text/plain" href="/llms-full.txt" title="DockTail full documentation for agents">
-  <link rel="icon" href="data:image/svg+xml,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'&gt;&lt;text y='.9em' font-size='90'&gt;🍸&lt;/text&gt;&lt;/svg&gt;">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍸</text></svg>">
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -347,282 +454,271 @@ var docsTemplate = template.Must(template.New("docs").Parse(`<!DOCTYPE html>
     data-site-id="ef0b4c42a7c2"
     defer
   ></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
   <style>
-    :root {
-      --bg: #f8fafc;
-      --panel: #ffffff;
-      --ink: #111827;
-      --muted: #64748b;
-      --line: #e5e7eb;
-      --soft: #f1f5f9;
-      --code: #0f172a;
-      --link: #0f766e;
+    html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
+    .sidebar-link.active { color: #111827; background-color: #f3f4f6; }
+
+    /* Markdown body styling — emulates the hand-crafted Tailwind layout */
+    .doc h1 { font-size: 1.5rem; font-weight: 700; color: #111827; margin-bottom: 1rem; }
+    .doc > h2 {
+      font-size: 1.5rem; font-weight: 700; color: #111827;
+      margin-top: 4rem; margin-bottom: 1rem;
+    }
+    .doc > h2:first-child { margin-top: 0; }
+    .doc > h3 {
+      font-size: 1.125rem; font-weight: 600; color: #111827;
+      margin-top: 2rem; margin-bottom: 0.75rem;
+    }
+    .doc p { font-size: 0.875rem; color: #6b7280; margin-bottom: 1rem; line-height: 1.65; }
+    .doc strong { color: #374151; font-weight: 600; }
+    .doc a { color: #111827; text-decoration: underline; text-underline-offset: 2px; }
+    .doc a:hover { color: #374151; }
+    .doc ul, .doc ol { font-size: 0.875rem; color: #6b7280; margin-bottom: 1rem; padding-left: 1.25rem; }
+    .doc ul { list-style: disc; }
+    .doc ol { list-style: decimal; }
+    .doc li + li { margin-top: 0.4rem; }
+    .doc li > p { margin-bottom: 0.4rem; }
+
+    .doc :not(pre) > code {
+      background-color: #f3f4f6;
+      padding: 0.1rem 0.375rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      color: #374151;
     }
 
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background:
-        radial-gradient(circle at top left, rgba(20, 184, 166, 0.10), transparent 28rem),
-        linear-gradient(180deg, #ffffff 0, var(--bg) 22rem);
-      color: var(--ink);
-      font: 15px/1.65 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-    }
-    a { color: inherit; }
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      border-bottom: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.92);
-      backdrop-filter: blur(12px);
-    }
-    .topbar-inner {
-      max-width: 1180px;
-      height: 56px;
-      margin: 0 auto;
-      padding: 0 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      text-decoration: none;
-      font-weight: 800;
-      letter-spacing: -0.04em;
-    }
-    .navlinks {
-      display: flex;
-      align-items: center;
-      gap: 18px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .navlinks a { text-decoration: none; }
-    .navlinks a:hover { color: var(--ink); }
-    .layout {
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: 34px 20px 56px;
-      display: grid;
-      grid-template-columns: 270px minmax(0, 1fr);
-      gap: 42px;
-    }
-    .sidebar {
-      position: sticky;
-      top: 82px;
-      align-self: start;
-      max-height: calc(100vh - 100px);
-      overflow: auto;
-      padding-right: 8px;
-    }
-    .sidebar-title {
-      margin: 0 0 12px;
-      font-size: 12px;
-      font-weight: 800;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-    .toc {
-      display: grid;
-      gap: 2px;
-      font-size: 13px;
-    }
-    .toc a {
-      display: block;
-      padding: 5px 10px;
-      border-radius: 8px;
-      color: var(--muted);
-      text-decoration: none;
-    }
-    .toc a:hover,
-    .toc a.active {
-      background: var(--soft);
-      color: var(--ink);
-    }
-    .toc .level-3 { padding-left: 24px; font-size: 12px; }
-    .doc {
-      min-width: 0;
-      max-width: 830px;
-      padding: 8px 0 0;
-    }
-    .doc h1 {
-      margin: 0 0 14px;
-      font-size: clamp(2.2rem, 8vw, 4.7rem);
-      line-height: 0.95;
-      letter-spacing: -0.08em;
-    }
-    .doc h2 {
-      margin: 54px 0 14px;
-      padding-top: 10px;
-      border-top: 1px solid var(--line);
-      font-size: 1.65rem;
-      line-height: 1.15;
-      letter-spacing: -0.05em;
-    }
-    .doc h3 {
-      margin: 34px 0 10px;
-      font-size: 1.1rem;
-      letter-spacing: -0.03em;
-    }
-    .doc p,
-    .doc ul,
-    .doc ol,
-    .doc table,
-    .doc pre { margin: 0 0 18px; }
-    .doc p,
-    .doc li { color: #334155; }
-    .doc strong { color: var(--ink); }
-    .doc a {
-      color: var(--link);
-      text-decoration-thickness: 1px;
-      text-underline-offset: 3px;
-    }
-    .doc ul,
-    .doc ol { padding-left: 24px; }
-    .doc li + li { margin-top: 6px; }
-    .doc code {
-      border: 1px solid var(--line);
-      border-radius: 5px;
-      background: var(--soft);
-      color: #0f172a;
-      padding: 1px 5px;
-      font-size: 0.92em;
-    }
-    .doc pre {
-      position: relative;
-      overflow-x: auto;
-      border-radius: 12px;
-      background: var(--code);
-      color: #e5e7eb;
-      padding: 18px;
-      box-shadow: 0 14px 36px rgba(15, 23, 42, 0.12);
-    }
-    .doc pre code {
-      border: 0;
-      border-radius: 0;
+    /* Code blocks: dark with copy button */
+    .doc .code-block { position: relative; margin-bottom: 1rem; }
+    .doc .code-block .copy-btn {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      font-size: 0.75rem;
+      color: #6b7280;
+      opacity: 0;
+      transition: opacity 0.15s, color 0.15s;
+      cursor: pointer;
       background: transparent;
-      color: inherit;
+      border: 0;
       padding: 0;
-      font-size: 13px;
-      line-height: 1.6;
+      font-family: inherit;
+      z-index: 2;
     }
+    .doc .code-block:hover .copy-btn { opacity: 1; }
+    .doc .code-block .copy-btn:hover { color: #d1d5db; }
+    .doc pre[class*="language-"] {
+      background: #111827 !important;
+      color: #f3f4f6;
+      border-radius: 0.375rem;
+      padding: 1rem;
+      font-size: 0.875rem;
+      overflow-x: auto;
+      margin: 0;
+      text-shadow: none;
+    }
+    .doc pre code { font-size: 0.875rem; line-height: 1.6; text-shadow: none; }
+
+    /* Prism token colors tuned to match the prior hand-tuned palette */
+    .doc .token.comment,
+    .doc .token.prolog,
+    .doc .token.doctype,
+    .doc .token.cdata { color: #6b7280; font-style: normal; }
+    .doc .token.punctuation { color: #d1d5db; }
+    .doc .token.property,
+    .doc .token.tag,
+    .doc .token.key,
+    .doc .token.atrule,
+    .doc .token.attr-name,
+    .doc .token.selector { color: #60a5fa; }
+    .doc .token.string,
+    .doc .token.attr-value,
+    .doc .token.char,
+    .doc .token.regex { color: #fbbf24; }
+    .doc .token.boolean,
+    .doc .token.number,
+    .doc .token.constant,
+    .doc .token.symbol,
+    .doc .token.deleted { color: #4ade80; }
+    .doc .token.scalar { color: #4ade80; }
+    .doc .token.operator,
+    .doc .token.entity,
+    .doc .token.url { color: #d1d5db; }
+    .doc .token.keyword { color: #c084fc; }
+    .doc .token.function { color: #f472b6; }
+
+    /* Tables */
     .doc table {
       width: 100%;
-      border-collapse: collapse;
+      font-size: 0.875rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.375rem;
       overflow: hidden;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: var(--panel);
+      margin-bottom: 1rem;
       display: block;
       overflow-x: auto;
-    }
-    .doc th,
-    .doc td {
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--line);
-      text-align: left;
-      vertical-align: top;
       white-space: nowrap;
     }
-    .doc td:last-child { white-space: normal; min-width: 280px; }
-    .doc th {
-      background: var(--soft);
-      font-size: 12px;
-      color: var(--ink);
-    }
-    .doc tr:last-child td { border-bottom: 0; }
-    .footer {
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: 26px 20px 40px;
-      border-top: 1px solid var(--line);
-      color: var(--muted);
-      font-size: 12px;
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    .footer a { color: inherit; text-decoration: none; }
-    .footer a:hover { color: var(--ink); }
+    .doc thead { background-color: #f3f4f6; color: #111827; }
+    .doc thead th { padding: 0.625rem 1rem; font-weight: 600; text-align: left; }
+    .doc tbody { background-color: #ffffff; color: #4b5563; }
+    .doc tbody tr { border-top: 1px solid #e5e7eb; }
+    .doc tbody td { padding: 0.625rem 1rem; vertical-align: top; }
+    .doc tbody td:last-child { white-space: normal; min-width: 18rem; }
 
-    @media (max-width: 900px) {
-      .layout { display: block; padding-top: 24px; }
-      .sidebar {
-        position: static;
-        max-height: none;
-        margin-bottom: 28px;
-        padding: 14px;
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        background: rgba(255, 255, 255, 0.75);
-      }
-      .toc { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
-      .toc .level-3 { display: none; }
-      .doc h2 { margin-top: 42px; }
+    /* Blockquote rendered as a callout note */
+    .doc blockquote {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.375rem;
+      padding: 1rem;
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-bottom: 1rem;
     }
+    .doc blockquote p { margin: 0; }
+    .doc blockquote p + p { margin-top: 0.5rem; }
   </style>
 </head>
-<body>
-  <nav class="topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="/">docktail</a>
-      <div class="navlinks">
-        <a href="/docs.md">markdown</a>
-        <a href="/llms.txt">agents</a>
-        <a href="https://github.com/marvinvr/docktail">github</a>
+<body class="bg-gray-50 text-gray-900 font-mono min-h-screen">
+
+  <!-- Nav -->
+  <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-6">
+        <a href="/" class="text-lg font-bold tracking-tight text-gray-900">docktail</a>
+        <span class="text-gray-300">/</span>
+        <span class="text-sm text-gray-500">docs</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <button id="sidebar-toggle" class="lg:hidden text-gray-500 hover:text-gray-900 transition-colors" aria-label="Open documentation navigation">
+          <svg class="w-5 h-5" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <a href="/docs.md" class="text-sm text-gray-500 hover:text-gray-900 transition-colors hidden sm:inline">markdown</a>
+        <a href="/llms.txt" class="text-sm text-gray-500 hover:text-gray-900 transition-colors hidden sm:inline">agents</a>
+        <a href="https://github.com/marvinvr/docktail" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">github</a>
       </div>
     </div>
   </nav>
 
-  <div class="layout">
-    <aside class="sidebar" aria-label="Documentation navigation">
-      <p class="sidebar-title">On this page</p>
-      <nav class="toc">
-        {{ range .Headings }}
-          {{ if and .ID (le .Level 3) (gt .Level 1) }}
-            <a class="level-{{ .Level }}" href="#{{ .ID }}">{{ .Text }}</a>
-          {{ end }}
-        {{ end }}
-      </nav>
-    </aside>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex gap-8">
 
-    <main class="doc">
-      {{ .Body }}
-    </main>
+      <!-- Sidebar -->
+      <aside id="sidebar" class="hidden lg:block w-64 flex-shrink-0">
+        <div class="sticky top-14 overflow-y-auto h-[calc(100vh-3.5rem)] py-8 pr-4">
+          <nav class="space-y-1 text-sm" aria-label="Documentation navigation">
+            {{ range $i, $s := .Sections }}
+              <div{{ if gt $i 0 }} class="pt-3"{{ end }}>
+                <a href="#{{ $s.ID }}" class="sidebar-link block px-3 py-1.5 rounded text-gray-500 hover:text-gray-900 transition-colors font-semibold">{{ $s.Text }}</a>
+                {{ range $s.Children }}
+                  <a href="#{{ .ID }}" class="sidebar-link block px-3 py-1.5 pl-6 rounded text-gray-400 hover:text-gray-900 transition-colors">{{ .Text }}</a>
+                {{ end }}
+              </div>
+            {{ end }}
+          </nav>
+        </div>
+      </aside>
+
+      <!-- Content -->
+      <main class="doc flex-1 min-w-0 py-8 lg:py-12 max-w-3xl">
+        {{ .Body }}
+
+        <!-- Footer -->
+        <div class="border-t border-gray-200 pt-8 pb-16 mt-16">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span class="text-xs text-gray-400">docktail · generated {{ .GeneratedAt }}</span>
+            <div class="flex items-center gap-6">
+              <a href="https://github.com/marvinvr/docktail" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">GitHub</a>
+              <a href="https://tailscale.com/kb/1552/tailscale-services" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">Tailscale Services</a>
+              <a href="/docs.md" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">Markdown</a>
+              <a href="/llms.txt" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">Agents</a>
+              <a href="https://marvinvr.ch" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">marvinvr</a>
+            </div>
+          </div>
+          <div class="mt-6 flex justify-center">
+            <a
+              href="https://github.com/sponsors/marvinvr?o=esb"
+              class="inline-flex items-center gap-2 rounded border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-700 hover:bg-gray-50"
+            >
+              <svg class="h-3.5 w-3.5 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m21 8.25c0-2.485-2.239-4.5-5-4.5-1.74 0-3.273.88-4.165 2.217A4.98 4.98 0 0 0 7.67 3.75c-2.761 0-5 2.015-5 4.5 0 7.22 9.165 12 9.165 12S21 15.47 21 8.25Z"></path>
+              </svg>
+              <span>Sponsor</span>
+            </a>
+          </div>
+        </div>
+      </main>
+    </div>
   </div>
 
-  <footer class="footer">
-    <span>Generated from <code>docs/*.md</code> on {{ .GeneratedAt }}.</span>
-    <span>
-      <a href="/docs.md">Markdown</a>
-      · <a href="/llms-full.txt">LLM full text</a>
-      · <a href="https://github.com/marvinvr/docktail">GitHub</a>
-    </span>
-  </footer>
+  <!-- Mobile sidebar overlay -->
+  <div id="sidebar-overlay" class="hidden fixed inset-0 z-40 bg-black/20 lg:hidden"></div>
+  <div id="sidebar-mobile" class="hidden fixed top-14 left-0 z-40 w-64 bg-white border-r border-gray-200 h-[calc(100vh-3.5rem)] overflow-y-auto py-6 px-2 lg:hidden"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
   <script>
-    const links = [...document.querySelectorAll('.toc a')];
-    const headings = links
-      .map(link => document.getElementById(link.hash.slice(1)))
-      .filter(Boolean);
+    // Wrap each <pre> in a .code-block container with a copy button.
+    document.querySelectorAll('.doc pre').forEach(pre => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'code-block';
+      pre.parentNode.insertBefore(wrapper, pre);
+      wrapper.appendChild(pre);
 
-    const observer = new IntersectionObserver(entries => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        links.forEach(link => link.classList.toggle('active', link.hash === '#' + entry.target.id));
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'copy-btn';
+      btn.textContent = 'copy';
+      btn.addEventListener('click', () => {
+        const code = pre.querySelector('code') || pre;
+        navigator.clipboard.writeText(code.textContent).then(() => {
+          btn.textContent = 'copied!';
+          setTimeout(() => btn.textContent = 'copy', 2000);
+        });
+      });
+      wrapper.appendChild(btn);
+    });
+
+    // Scroll spy
+    const links = [...document.querySelectorAll('.sidebar-link')];
+    const sections = links
+      .map(l => ({ link: l, el: document.getElementById(l.hash.slice(1)) }))
+      .filter(s => s.el);
+
+    function updateActive() {
+      let current = sections[0]?.link;
+      for (const s of sections) {
+        if (s.el.getBoundingClientRect().top <= 100) current = s.link;
       }
-    }, { rootMargin: '-20% 0px -70% 0px' });
+      links.forEach(l => l.classList.toggle('active', l === current));
+    }
+    window.addEventListener('scroll', updateActive, { passive: true });
+    updateActive();
 
-    headings.forEach(heading => observer.observe(heading));
+    // Mobile sidebar
+    const toggle = document.getElementById('sidebar-toggle');
+    const overlay = document.getElementById('sidebar-overlay');
+    const mobileSidebar = document.getElementById('sidebar-mobile');
+    const desktopNav = document.querySelector('#sidebar nav');
+
+    if (desktopNav && mobileSidebar) {
+      mobileSidebar.appendChild(desktopNav.cloneNode(true));
+      mobileSidebar.querySelectorAll('.sidebar-link').forEach(link => {
+        link.addEventListener('click', closeSidebar);
+      });
+    }
+
+    function closeSidebar() {
+      overlay.classList.add('hidden');
+      mobileSidebar.classList.add('hidden');
+    }
+    toggle?.addEventListener('click', () => {
+      overlay.classList.toggle('hidden');
+      mobileSidebar.classList.toggle('hidden');
+    });
+    overlay?.addEventListener('click', closeSidebar);
   </script>
 </body>
 </html>
