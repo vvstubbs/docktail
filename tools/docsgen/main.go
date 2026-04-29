@@ -217,7 +217,7 @@ func renderLLMS(data pageData) string {
 		if h.Level == 3 {
 			prefix = "  -"
 		}
-		out.WriteString(fmt.Sprintf("%s %s: https://docktail.org/docs/#%s\n", prefix, h.Text, h.ID))
+		fmt.Fprintf(&out, "%s %s: https://docktail.org/docs/#%s\n", prefix, h.Text, h.ID)
 	}
 	out.WriteString("\n## Agent Guidance\n\n")
 	out.WriteString("Read https://docktail.org/llms-full.txt when you need the complete documentation in one text document. Use https://docktail.org/docs.md when Markdown structure matters. Prefer the generated docs over README for complete configuration details.\n")
