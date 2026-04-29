@@ -6,6 +6,7 @@ require (
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.6.0
 	github.com/rs/zerolog v1.34.0
+	github.com/yuin/goldmark v1.8.2
 	golang.org/x/oauth2 v0.34.0
 	golang.org/x/term v0.40.0
 )

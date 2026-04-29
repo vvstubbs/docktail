@@ -1,4 +1,4 @@
-.PHONY: build run clean docker-build docker-push test fmt vet
+.PHONY: build run clean docker-build docker-push test fmt vet docs-generate website-docker-build
 
 # Variables
 BINARY_NAME=docktail
@@ -21,6 +21,14 @@ clean:
 # Build Docker image
 docker-build:
 	docker build -t $(DOCKER_IMAGE):$(VERSION) .
+
+# Generate website documentation from docs/*.md
+docs-generate:
+	go run ./tools/docsgen
+
+# Build website image from the repository root context
+website-docker-build:
+	docker build -f website/Dockerfile .
 
 # Push Docker image
 docker-push: docker-build

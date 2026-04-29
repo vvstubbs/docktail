@@ -98,6 +98,13 @@ go.work.sum
 # env file
 .env
 
+# Generated website documentation
+website/docs/
+website/docs.md
+website/llms.txt
+website/llms-full.txt
+website/sitemap.xml
+
 # Editor/IDE
 # .idea/
 # .vscode/
