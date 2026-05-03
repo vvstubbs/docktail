@@ -450,7 +450,7 @@ var docsTemplate = template.Must(template.New("docs").Parse(`<!DOCTYPE html>
     }
   </script>
   <script
-    src="https://rybbit.marvinvr.ch/api/script.js"
+    src="https://stats.marvinvr.ch/api/script.js"
     data-site-id="ef0b4c42a7c2"
     defer
   ></script>
